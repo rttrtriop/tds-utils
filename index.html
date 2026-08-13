@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TDS STRATEGIST</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="header">
+        <h1>TDS STRATEGIST</h1>
+        <div class="header-right">
+          <button id="community-btn" class="secondary-btn">Community Presets</button>
+          <button id="login-btn" class="primary-btn" style="margin-top:0;">Sign In</button>
+          <div class="session-info">
+            <span>Session ID:</span>
+            <span id="session-id" class="accent-text"></span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Login Modal -->
+      <div id="login-modal" class="modal">
+        <div class="modal-content" style="text-align:center;">
+          <span class="close-login-btn close-btn">&times;</span>
+          <h2>Sign In</h2>
+          <p>Connect your Telegram account to sync your presets, likes, and favorites.</p>
+          <button id="fast-login-btn" class="primary-btn" style="margin-top: 1rem; width: auto;">📱 Быстрый вход через Telegram</button>
+          <p id="login-status" style="margin-top: 1rem; color: var(--accent-color); display: none;">Waiting for bot confirmation...</p>
+        </div>
+      </div>
+
+      <!-- Community Presets Modal -->
+      <div id="community-modal" class="modal">
+        <div class="modal-content">
+          <span class="close-btn">&times;</span>
+          <h2>Community Presets</h2>
+
+          <div class="modal-tabs">
+            <button id="tab-browse" class="tab-btn active">Browse</button>
+            <button id="tab-publish" class="tab-btn">Publish</button>
+            <button id="tab-favorites" class="tab-btn">Favorites</button>
+            <button id="tab-my-presets" class="tab-btn">My Presets</button>
+            <button id="tab-profile" class="tab-btn">Profile</button>
+          </div>
+
+          <!-- Browse Tab -->
+          <div id="browse-section" class="tab-content active">
+            <div class="filter-group">
+              <label for="filter-mode">Filter by Mode:</label>
+              <select id="filter-mode">
+                <option value="All">All</option>
+                <option value="Easy">Easy</option>
+                <option value="Casual">Casual</option>
+                <option value="Intermediate">Intermediate</option>
+                <option value="Molten">Molten</option>
+                <option value="Fallen">Fallen</option>
+                <option value="Frost">Frost</option>
+                <option value="Hardcore">Hardcore</option>
+                <option value="Voidcore">Voidcore</option>
+                <option value="Pizza Party">Pizza Party</option>
+                <option value="Badlands II">Badlands II</option>
+                <option value="Polluted Wasteland II">Polluted Wasteland II</option>
+              </select>
+            </div>
+
+            <div class="presets-list" id="presets-list">
+              <!-- Presets will be loaded here -->
+            </div>
+          </div>
+
+          <!-- Publish Tab -->
+          <div id="publish-section" class="tab-content">
+            <div class="input-group">
+              <label for="preset-title">Preset Title</label>
+              <input type="text" id="preset-title" placeholder="e.g., Solo Hardcore Strat" />
+            </div>
+            <div class="input-group">
+              <label for="author-name">Your Name (Optional)</label>
+              <input type="text" id="author-name" placeholder="Anonymous" />
+            </div>
+            <p class="publish-note">This will publish your current calculator configuration for moderation.</p>
+            <button id="publish-submit-btn" class="primary-btn">Submit Preset</button>
+            <div id="publish-status" class="status-msg"></div>
+          </div>
+
+          <!-- Favorites Tab -->
+          <div id="favorites-section" class="tab-content">
+            <div class="presets-list" id="favorites-list">
+              <p>Favorites functionality coming soon (requires full login API).</p>
+            </div>
+          </div>
+
+          <!-- My Presets Tab -->
+          <div id="my-presets-section" class="tab-content">
+            <div class="presets-list" id="my-presets-list">
+              <p>My Presets functionality coming soon (requires full login API).</p>
+            </div>
+          </div>
+
+          <!-- Profile Tab -->
+          <div id="profile-section" class="tab-content">
+            <div class="stats-grid" id="profile-stats">
+              <p>Profile functionality coming soon (requires full login API).</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <main class="main-content">
+        <section class="config-panel">
+          <h2>Configuration</h2>
+
+          <div class="input-group">
+            <label for="mode-select">Game Mode</label>
+            <select id="mode-select">
+              <option value="Easy">Easy</option>
+              <option value="Casual">Casual</option>
+              <option value="Intermediate">Intermediate</option>
+              <option value="Molten">Molten</option>
+              <option value="Fallen">Fallen</option>
+              <option value="Frost">Frost</option>
+              <option value="Hardcore">Hardcore</option>
+              <option value="Voidcore">Voidcore</option>
+              <option value="Pizza Party">Pizza Party</option>
+              <option value="Badlands II">Badlands II</option>
+              <option value="Polluted Wasteland II">Polluted Wasteland II</option>
+            </select>
+          </div>
+
+          <div class="input-group">
+            <label for="players-select">Players</label>
+            <select id="players-select">
+              <option value="1">1P - Solo</option>
+              <option value="2">2P - Duo</option>
+              <option value="3">3P - Trio</option>
+              <option value="4">4P - Squad</option>
+            </select>
+          </div>
+
+          <div class="grid-2">
+            <div class="input-group">
+              <label for="start-wave">Start Wave</label>
+              <input type="number" id="start-wave" value="0" min="0" />
+            </div>
+            <div class="input-group">
+              <label for="target-wave">Target Wave</label>
+              <input type="number" id="target-wave" value="40" min="1" />
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="input-group">
+              <label for="start-cash">Start Cash</label>
+              <input type="number" id="start-cash" value="600" min="0" />
+            </div>
+            <div class="input-group">
+              <label for="target-cash">Target Cash</label>
+              <input type="number" id="target-cash" value="10000" min="0" />
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="input-group checkbox-group">
+              <input type="checkbox" id="wave-rewards-active" />
+              <label for="wave-rewards-active">Wave Rewards</label>
+            </div>
+
+            <div class="input-group checkbox-group locked">
+              <input type="checkbox" id="no-skill-tree" checked disabled />
+              <label for="no-skill-tree">No Skill Tree 🔒</label>
+            </div>
+          </div>
+
+          <button id="run-btn" class="primary-btn">Run Simulation</button>
+        </section>
+
+        <section class="farms-panel">
+          <div class="farms-header">
+            <h2>ACTIVE FARM DECK (<span id="farm-count">0</span>/10)</h2>
+            <div class="farms-actions">
+              <button id="add-farm-btn" class="secondary-btn">+ Farm Lvl 0 ($300)</button>
+              <button id="clear-farms-btn" class="danger-btn">Clear</button>
+            </div>
+          </div>
+          <div class="farms-container" id="farms-container">
+            <!-- Farm cards will be injected here -->
+          </div>
+        </section>
+
+        <section class="results-panel" id="results-panel">
+          <h2>Simulation Results</h2>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-label">Total Income</div>
+              <div class="stat-value accent-text" id="res-total-income">0</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Pure Cash at End</div>
+              <div class="stat-value accent-text" id="res-pure-cash">0</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Max Wealth (Sell All)</div>
+              <div class="stat-value accent-text" id="res-max-wealth">0</div>
+            </div>
+          </div>
+
+          <h3>Action Plan</h3>
+          <div class="action-plan" id="action-plan-container">
+            <!-- Action plan rows will be injected here -->
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
