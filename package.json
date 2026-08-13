@@ -6,8 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "vite --host",
-    "build": "vite --host build",
-    "preview": "vite --host preview"
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "repository": {
     "type": "git",
