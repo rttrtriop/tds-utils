@@ -397,22 +397,22 @@ async def publish_preset_api(request):
         if is_appeal:
             kb.button(text="✅ Одобрить замену", callback_data=f"replace_{pid}_{mode}")
             kb.button(text="❌ Отклонить", callback_data=f"reject_{pid}")
-            msg = f"⚠️ **Апелляция на замену пресета!**
+            msg = f"""⚠️ **Апелляция на замену пресета!**
 
 Название: {title}
 Режим: {mode} ({players})
 Автор: {author_username}
-Причина: {appeal_reason}"
+Причина: {appeal_reason}"""
         else:
             kb.button(text="✅ Одобрить", callback_data=f"approve_{pid}")
             kb.button(text="❌ Отклонить", callback_data=f"reject_{pid}")
-            msg = f"**Новый пресет на модерацию!**
+            msg = f"""**Новый пресет на модерацию!**
 
 Название: {title}
 Автор: {author_username} ({author_id})
 Режим: {mode} ({players})
 
-Данные: `{json.dumps(preset_data)[:100]}...`"
+Данные: `{json.dumps(preset_data)[:100]}...`"""
 
         await bot.send_message(ADMIN_ID, msg, reply_markup=kb.as_markup(), parse_mode="Markdown")
 
