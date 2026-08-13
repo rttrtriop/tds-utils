@@ -5,9 +5,9 @@
   --border-light: rgba(255, 255, 255, 0.07);
   --border-hover: rgba(255, 255, 255, 0.15);
 
-  --text-primary: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.6);
-  --text-tertiary: rgba(255, 255, 255, 0.4);
+  --text-primary: rgba(255, 255, 255, 0.95);
+  --text-secondary: rgba(255, 255, 255, 0.65);
+  --text-tertiary: rgba(255, 255, 255, 0.45);
 
   --accent-emerald: #10B981;
   --accent-emerald-dim: rgba(16, 185, 129, 0.15);
@@ -85,13 +85,11 @@ header {
 }
 
 .logo h1 {
-  font-size: 1.25rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   margin: 0;
-  background: linear-gradient(135deg, #fff 0%, #a0a5b0 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--text-primary);
 }
 
 .logo p {
@@ -229,7 +227,11 @@ header {
   min-width: 60px;
   position: relative;
   user-select: none;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.farm-badge:active {
+  transform: scale(0.95);
 }
 .farm-badge:hover {
   background: var(--border-hover);
@@ -733,3 +735,95 @@ header {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
+
+/* Error Widget */
+.error-widget {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  color: var(--text-secondary);
+}
+.error-widget svg {
+  margin-bottom: 1rem;
+  color: var(--text-tertiary);
+}
+.error-widget h3 {
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+.error-widget p {
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+/* Farm Action Modal */
+#farmActionModal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border-light);
+  padding: 1.5rem;
+  border-radius: 16px;
+  z-index: 1000;
+  width: 90%;
+  max-width: 320px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+#farmActionModal.active {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  pointer-events: auto;
+}
+.farm-action-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+.farm-action-header h3 {
+  font-size: 1.2rem;
+  margin-bottom: 0.2rem;
+}
+.farm-action-header p {
+  font-size: 0.85rem;
+  color: var(--accent-emerald);
+}
+.farm-action-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.btn-upgrade {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--accent-emerald);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 10px;
+  border-radius: 8px;
+  font-weight: 600;
+  text-align: center;
+  transition: background 0.2s;
+}
+.btn-upgrade:hover { background: rgba(16, 185, 129, 0.2); }
+.btn-sell {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger-color);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 10px;
+  border-radius: 8px;
+  font-weight: 600;
+  text-align: center;
+  transition: background 0.2s;
+}
+.btn-sell:hover { background: rgba(239, 68, 68, 0.2); }

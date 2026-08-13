@@ -50,10 +50,12 @@ class Leaf {
         let dx = mouseX - this.x;
         let dy = mouseY - this.y;
         let dist = Math.sqrt(dx*dx + dy*dy);
-        if (dist < 100) {
-            let force = (100 - dist) / 100;
-            this.x -= (dx / dist) * force * 5;
-            this.y -= (dy / dist) * force * 5;
+        if (dist < 120) {
+            let force = (120 - dist) / 120;
+            // Smooth repulsion
+            this.x -= (dx / dist) * force * 2;
+            this.y -= (dy / dist) * force * 2;
+            this.spin += (Math.random() - 0.5) * force * 0.1;
         }
 
         if (this.y > height + 20 || this.x < -20 || this.x > width + 20) {
@@ -66,9 +68,28 @@ class Leaf {
         ctx.rotate(this.angle);
         ctx.fillStyle = `rgba(16, 185, 129, ${this.opacity})`;
         ctx.beginPath();
-        // Simple leaf shape
-        ctx.ellipse(0, 0, this.size, this.size / 2, 0, 0, Math.PI * 2);
+        // Realistic leaf shape
+        ctx.beginPath();
+        ctx.moveTo(this.size, 0);
+        ctx.bezierCurveTo(this.size, this.size/2, this.size/2, this.size, 0, this.size);
+        ctx.bezierCurveTo(-this.size/2, this.size, -this.size, this.size/2, -this.size, 0);
+        ctx.bezierCurveTo(-this.size, -this.size/2, -this.size/2, -this.size, 0, -this.size);
+        ctx.bezierCurveTo(this.size/2, -this.size, this.size, -this.size/2, this.size, 0);
+
+        let grad = ctx.createLinearGradient(-this.size, -this.size, this.size, this.size);
+        grad.addColorStop(0, `rgba(16, 185, 129, ${this.opacity})`);
+        grad.addColorStop(1, `rgba(6, 95, 70, ${this.opacity})`);
+        ctx.fillStyle = grad;
         ctx.fill();
+
+        // Leaf vein
+        ctx.beginPath();
+        ctx.moveTo(-this.size*0.8, 0);
+        ctx.lineTo(this.size*0.8, 0);
+        ctx.strokeStyle = `rgba(255, 255, 255, ${this.opacity * 0.5})`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
         ctx.restore();
     }
 }
@@ -295,10 +316,11 @@ function renderFarms() {
         let el = document.createElement('div');
         el.className = 'farm-badge';
         el.innerHTML = `
-            <button class="farm-remove" onclick="removeFarm(${idx})">×</button>
+            <button class="farm-remove" onclick="removeFarm(event, ${idx})">×</button>
             <div class="farm-lvl">L${lvl}</div>
             <div class="farm-inc">+$${FARM_STATS[lvl].inc}</div>
         `;
+        el.onclick = () => openFarmActionModal(idx, lvl);
         list.appendChild(el);
     });
 
@@ -308,9 +330,69 @@ function renderFarms() {
     document.getElementById('lblDeckIncome').textContent = `+$${totalInc} / волна`;
 }
 
-window.removeFarm = (idx) => {
+window.removeFarm = (e, idx) => {
+    e.stopPropagation();
     activeFarms.splice(idx, 1);
     renderFarms();
+};
+
+const farmModal = document.getElementById('farmActionModal');
+let currentFarmActionIdx = -1;
+
+function openFarmActionModal(idx, lvl) {
+    currentFarmActionIdx = idx;
+
+    document.getElementById('farmActionTitle').textContent = `Ферма Ур ${lvl}`;
+    document.getElementById('farmActionIncome').textContent = `+$${FARM_STATS[lvl].inc} / волна`;
+
+    const btnUp = document.getElementById('btnFarmUpgrade');
+    const btnSell = document.getElementById('btnFarmSell');
+
+    if (lvl < 5) {
+        let nextLvl = lvl + 1;
+        btnUp.style.display = 'block';
+        btnUp.innerHTML = `⬆️ Прокачать до Ур ${nextLvl}<br><span style="font-size: 0.8rem; opacity: 0.8;">Стоимость: $${FARM_STATS[nextLvl].upg}</span>`;
+        btnUp.onclick = () => {
+            activeFarms[idx] = nextLvl;
+            renderFarms();
+            closeFarmActionModal();
+        };
+    } else {
+        btnUp.style.display = 'none';
+    }
+
+    let sellVal = Math.floor(FARM_STATS[lvl].total / 2);
+    btnSell.innerHTML = `💰 Продать<br><span style="font-size: 0.8rem; opacity: 0.8;">Получить: $${sellVal}</span>`;
+    btnSell.onclick = () => {
+        activeFarms.splice(idx, 1);
+        renderFarms();
+        closeFarmActionModal();
+    };
+
+    overlay.classList.add('active');
+    farmModal.classList.add('active');
+}
+
+function closeFarmActionModal() {
+    farmModal.classList.remove('active');
+    if (!settingsDrawer.classList.contains('active') &&
+        !rewardsDrawer.classList.contains('active') &&
+        !libraryDrawer.classList.contains('active')) {
+        overlay.classList.remove('active');
+    }
+    currentFarmActionIdx = -1;
+}
+
+document.getElementById('btnFarmCancel').onclick = closeFarmActionModal;
+
+// Intercept overlay click to also close modal
+const originalOverlayClick = overlay.onclick;
+overlay.onclick = (e) => {
+    if (farmModal.classList.contains('active')) {
+        closeFarmActionModal();
+    } else {
+        originalOverlayClick(e);
+    }
 };
 
 document.getElementById('btnAddFarm0').onclick = () => {
@@ -465,7 +547,14 @@ async function fetchCommunityPresets() {
 
         presets.forEach(p => renderPresetCard(p, container));
     } catch (e) {
-        container.innerHTML = '<p>Ошибка загрузки.</p>';
+        container.innerHTML = `
+            <div class="error-widget">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 21H5a5.5 5.5 0 0 1-5.5-5.5C-.5 12.5 2 10 5 10c.8-4.5 4.5-8 9-8 4.2 0 7.7 3.2 8.4 7.2l-2 .5C19.8 6.5 16.8 4 14 4 10.5 4 7.5 6.8 6.8 10.5L6.5 12l-1.5.2C3 12.5 1.5 14 1.5 15.5S3 19 5 19h5l.3 2z"></path><line x1="22" y1="2" x2="2" y2="22"></line></svg>
+                <h3>Нет подключения к серверу</h3>
+                <p>Не удалось загрузить данные из библиотеки.</p>
+                <button class="btn btn-primary liquid-btn" onclick="fetchCommunityPresets()">Повторить</button>
+            </div>
+        `;
     }
 }
 
@@ -560,7 +649,63 @@ function connectWebSocket() {
 }
 connectWebSocket();
 
+function renderProfileLocalPresets() {
+    const list = document.getElementById('listProfileLocalPresets');
+    if (!list) return;
+    let presets = {};
+    try { presets = JSON.parse(localStorage.getItem('tdsLocalPresets')) || {}; } catch(e) {}
+    list.innerHTML = '';
+
+    if (Object.keys(presets).length === 0) {
+        list.innerHTML = '<li class="dropdown-item" style="justify-content:center; color: var(--text-muted); cursor:default;">Нет сохраненных пресетов</li>';
+        return;
+    }
+
+    Object.keys(presets).forEach(name => {
+        let li = document.createElement('li');
+        li.className = 'dropdown-item';
+        li.style.display = 'flex';
+        li.style.justifyContent = 'space-between';
+
+        let span = document.createElement('span');
+        span.textContent = name;
+
+        let actionDiv = document.createElement('div');
+
+        let btnLoad = document.createElement('button');
+        btnLoad.className = 'badge-btn liquid-btn';
+        btnLoad.style.marginRight = '8px';
+        btnLoad.textContent = 'Загрузить';
+        btnLoad.onclick = (e) => {
+            e.stopPropagation();
+            applyPresetToUI(presets[name]);
+            showToast(`Пресет "${name}" загружен`);
+        };
+
+        let btnDel = document.createElement('button');
+        btnDel.className = 'badge-btn danger';
+        btnDel.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>Удалить';
+        btnDel.onclick = (e) => {
+            e.stopPropagation();
+            delete presets[name];
+            localStorage.setItem('tdsLocalPresets', JSON.stringify(presets));
+            renderProfileLocalPresets();
+            loadLocalPresetsList();
+            showToast(`Пресет "${name}" удален`);
+        };
+
+        actionDiv.appendChild(btnLoad);
+        actionDiv.appendChild(btnDel);
+
+        li.appendChild(span);
+        li.appendChild(actionDiv);
+        list.appendChild(li);
+    });
+}
+
 async function fetchProfileData() {
+    renderProfileLocalPresets();
+
     if(!currentUserId) return;
     try {
         const resProfile = await fetch(`${API_URL}/api/profile?user_id=${currentUserId}`);
@@ -575,15 +720,40 @@ async function fetchProfileData() {
         const favs = await resFav.json();
         const favList = document.getElementById('favorites-list');
         favList.innerHTML = '';
-        favs.forEach(p => renderPresetCard(p, favList));
+        if (favs.length === 0) {
+            favList.innerHTML = '<p class="empty-text">Нет избранных пресетов</p>';
+        } else {
+            favs.forEach(p => renderPresetCard(p, favList));
+        }
 
         const resMy = await fetch(`${API_URL}/api/my_presets?user_id=${currentUserId}`);
         const my = await resMy.json();
         const myList = document.getElementById('my-presets-list');
         myList.innerHTML = '';
-        my.forEach(p => renderPresetCard(p, myList));
+        if (my.length === 0) {
+            myList.innerHTML = '<p class="empty-text">Вы еще не публиковали пресеты</p>';
+        } else {
+            my.forEach(p => renderPresetCard(p, myList));
+        }
 
-    } catch(e) {}
+    } catch(e) {
+        document.getElementById('favorites-list').innerHTML = `
+            <div class="error-widget">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 21H5a5.5 5.5 0 0 1-5.5-5.5C-.5 12.5 2 10 5 10c.8-4.5 4.5-8 9-8 4.2 0 7.7 3.2 8.4 7.2l-2 .5C19.8 6.5 16.8 4 14 4 10.5 4 7.5 6.8 6.8 10.5L6.5 12l-1.5.2C3 12.5 1.5 14 1.5 15.5S3 19 5 19h5l.3 2z"></path><line x1="22" y1="2" x2="2" y2="22"></line></svg>
+                <h3>Ошибка сети</h3>
+                <p>Не удалось загрузить данные профиля.</p>
+                <button class="btn btn-primary liquid-btn" onclick="fetchProfileData()">Повторить</button>
+            </div>
+        `;
+        document.getElementById('my-presets-list').innerHTML = `
+            <div class="error-widget">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 21H5a5.5 5.5 0 0 1-5.5-5.5C-.5 12.5 2 10 5 10c.8-4.5 4.5-8 9-8 4.2 0 7.7 3.2 8.4 7.2l-2 .5C19.8 6.5 16.8 4 14 4 10.5 4 7.5 6.8 6.8 10.5L6.5 12l-1.5.2C3 12.5 1.5 14 1.5 15.5S3 19 5 19h5l.3 2z"></path><line x1="22" y1="2" x2="2" y2="22"></line></svg>
+                <h3>Ошибка сети</h3>
+                <p>Не удалось загрузить данные профиля.</p>
+                <button class="btn btn-primary liquid-btn" onclick="fetchProfileData()">Повторить</button>
+            </div>
+        `;
+    }
 }
 
 window.loadPresetData = async (id) => {
@@ -641,6 +811,14 @@ function applyPresetToUI(preset) {
     }
 }
 
+document.getElementById('btnPublishFromRewards').onclick = () => {
+    closeDrawer(document.getElementById('rewardsDrawer'));
+    openDrawer(document.getElementById('libraryDrawer'));
+    const pubTab = document.querySelector('[data-target="lib-publish"]');
+    if (pubTab) pubTab.click();
+};
+
 // Initial renders
 renderFarms();
 fetchCommunityPresets();
+renderProfileLocalPresets();
