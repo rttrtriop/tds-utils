@@ -66,45 +66,34 @@ class Leaf {
         ctx.save();
         ctx.translate(this.x, this.y);
         ctx.rotate(this.angle);
+        ctx.beginPath();
+        // Optimized simple vector shape instead of heavy gradients and veins
+        ctx.moveTo(0, -this.size);
+        ctx.bezierCurveTo(this.size, -this.size, this.size, this.size, 0, this.size);
+        ctx.bezierCurveTo(-this.size, this.size, -this.size, -this.size, 0, -this.size);
         ctx.fillStyle = `rgba(16, 185, 129, ${this.opacity})`;
-        ctx.beginPath();
-        // Realistic leaf shape
-        ctx.beginPath();
-        ctx.moveTo(this.size, 0);
-        ctx.bezierCurveTo(this.size, this.size/2, this.size/2, this.size, 0, this.size);
-        ctx.bezierCurveTo(-this.size/2, this.size, -this.size, this.size/2, -this.size, 0);
-        ctx.bezierCurveTo(-this.size, -this.size/2, -this.size/2, -this.size, 0, -this.size);
-        ctx.bezierCurveTo(this.size/2, -this.size, this.size, -this.size/2, this.size, 0);
-
-        let grad = ctx.createLinearGradient(-this.size, -this.size, this.size, this.size);
-        grad.addColorStop(0, `rgba(16, 185, 129, ${this.opacity})`);
-        grad.addColorStop(1, `rgba(6, 95, 70, ${this.opacity})`);
-        ctx.fillStyle = grad;
         ctx.fill();
-
-        // Leaf vein
-        ctx.beginPath();
-        ctx.moveTo(-this.size*0.8, 0);
-        ctx.lineTo(this.size*0.8, 0);
-        ctx.strokeStyle = `rgba(255, 255, 255, ${this.opacity * 0.5})`;
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
         ctx.restore();
     }
 }
 
 for (let i = 0; i < 40; i++) leaves.push(new Leaf());
 
-function animateCanvas() {
+let lastRenderTime = 0;
+const FPS_LIMIT = 1000 / 30; // 30 FPS
+
+function animateCanvas(timestamp) {
+    requestAnimationFrame(animateCanvas);
+    if (timestamp - lastRenderTime < FPS_LIMIT) return;
+    lastRenderTime = timestamp;
+
     ctx.clearRect(0, 0, width, height);
     leaves.forEach(l => {
         l.update();
         l.draw();
     });
-    requestAnimationFrame(animateCanvas);
 }
-animateCanvas();
+requestAnimationFrame(animateCanvas);
 
 // --- Drawers Logic ---
 const overlay = document.getElementById('drawerOverlay');
@@ -515,17 +504,17 @@ function showToast(msg) {
 }
 
 const MODE_ICONS = {
-  "Easy": "https://static.wikia.nocookie.net/tower-defense-sim/images/8/87/EasyReworkIcon.png",
-  "Casual": "https://static.wikia.nocookie.net/tower-defense-sim/images/0/02/GraveDiggerEasyIcon.png",
-  "Intermediate": "https://static.wikia.nocookie.net/tower-defense-sim/images/9/96/PatientZeroIntermediateIcon.png",
-  "Molten": "https://static.wikia.nocookie.net/tower-defense-sim/images/7/7f/MoltenBossMoltenIcon.png",
-  "Fallen": "https://static.wikia.nocookie.net/tower-defense-sim/images/1/1c/FallenReworkIcon.png",
-  "Frost": "https://static.wikia.nocookie.net/tower-defense-sim/images/e/ec/FrostModeIcon.png",
-  "Hardcore": "https://static.wikia.nocookie.net/tower-defense-sim/images/d/dd/Hardcore2026Icon.png",
-  "Voidcore": "https://static.wikia.nocookie.net/tower-defense-sim/images/9/94/VoidcoreIcon.png",
-  "Pizza Party": "https://static.wikia.nocookie.net/tower-defense-sim/images/9/96/PizzaPartyIconNew.png",
-  "Badlands II": "https://static.wikia.nocookie.net/tower-defense-sim/images/7/78/BadlandsIIIconNew.png",
-  "Polluted Wasteland II": "https://static.wikia.nocookie.net/tower-defense-sim/images/b/bd/PollutedWastelandIIIconNew.png"
+  "Easy": "https://static.wikia.nocookie.net/tower-defense-sim/images/8/87/EasyReworkIcon.png/revision/latest?cb=20250227044408",
+  "Casual": "https://static.wikia.nocookie.net/tower-defense-sim/images/0/02/GraveDiggerEasyIcon.png/revision/latest?cb=20241211213131",
+  "Intermediate": "https://static.wikia.nocookie.net/tower-defense-sim/images/9/96/PatientZeroIntermediateIcon.png/revision/latest?cb=20241211213411",
+  "Molten": "https://static.wikia.nocookie.net/tower-defense-sim/images/7/7f/MoltenBossMoltenIcon.png/revision/latest?cb=20241211213448",
+  "Fallen": "https://static.wikia.nocookie.net/tower-defense-sim/images/1/1c/FallenReworkIcon.png/revision/latest?cb=20240803164713",
+  "Frost": "https://static.wikia.nocookie.net/tower-defense-sim/images/e/ec/FrostModeIcon.png/revision/latest?cb=20251203204554",
+  "Hardcore": "https://static.wikia.nocookie.net/tower-defense-sim/images/d/dd/Hardcore2026Icon.png/revision/latest?cb=20260614105757",
+  "Voidcore": "https://static.wikia.nocookie.net/tower-defense-sim/images/9/94/VoidcoreIcon.png/revision/latest?cb=20260614105802",
+  "Pizza Party": "https://static.wikia.nocookie.net/tower-defense-sim/images/9/96/PizzaPartyIconNew.png/revision/latest?cb=20240622151720",
+  "Badlands II": "https://static.wikia.nocookie.net/tower-defense-sim/images/7/78/BadlandsIIIconNew.png/revision/latest?cb=20240622151658",
+  "Polluted Wasteland II": "https://static.wikia.nocookie.net/tower-defense-sim/images/b/bd/PollutedWastelandIIIconNew.png/revision/latest?cb=20240622151711"
 };
 
 async function fetchCommunityPresets() {
@@ -558,28 +547,47 @@ async function fetchCommunityPresets() {
     }
 }
 
-function renderPresetCard(p, container) {
-    const iconUrl = MODE_ICONS[p.mode] || MODE_ICONS["Easy"];
+
+function renderPresetCard(preset, container) {
     const card = document.createElement('div');
-    card.className = 'preset-card liquid-btn';
-    card.style.display = 'flex';
-    card.style.cursor = 'default';
+    card.className = 'preset-card';
+
+    const iconUrl = MODE_ICONS[preset.mode] || MODE_ICONS["Easy"];
+
+    // Determine status (available/occupied) for coloring if we are in publish view, but here it's the library view
+    // The library shows existing presets (so they are occupied by definition if they exist)
+    const isOccupied = true;
+
     card.innerHTML = `
-        <img src="${iconUrl}" alt="${p.mode}" class="preset-icon" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\'/>'"/>
-        <div class="preset-info">
-            <h3 class="safe-title"></h3>
-            <p>${p.mode} | ${p.players}P | Автор: ${p.author || 'Anonymous'}</p>
-            <div class="social-actions">
-                <button class="badge-btn liquid-btn" onclick="interactPreset(${p.id}, 'like', event)">👍 ${p.likes || 0}</button>
-                <button class="badge-btn liquid-btn" onclick="interactPreset(${p.id}, 'favorite', event)">⭐</button>
-                <button class="badge-btn liquid-btn danger-btn" onclick="reportPreset(${p.id}, event)">⚠️</button>
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div style="display:flex; align-items:center; gap: 10px;">
+                <img src="${iconUrl}" style="width: 32px; height: 32px; border-radius: 4px;">
+                <div>
+                    <h3 style="margin: 0; font-size: 1rem; color: var(--text-primary);">${preset.title}</h3>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary); display:flex; gap:8px; margin-top:4px;">
+                        <span><span style="color:var(--accent-emerald);">●</span> ${preset.mode}</span>
+                        <span><span style="color:#3B82F6;">●</span> ${preset.players}</span>
+                        <span>Автор: ${preset.author || preset.username || 'Аноним'}</span>
+                    </div>
+                </div>
             </div>
         </div>
-        <button class="btn btn-primary liquid-btn" onclick="loadPresetData(${p.id})" style="padding:8px;">Загрузить</button>
+        <div style="display:flex; justify-content:space-between; margin-top: 15px;">
+            <div class="farm-action-btns" style="display: flex; gap: 8px;">
+                <button class="btn btn-primary" onclick="loadPresetFromDB(${preset.id})" style="font-size: 12px; padding: 6px 12px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Загрузить в калькулятор
+                </button>
+            </div>
+            <div style="display: flex; align-items:center; color: var(--danger-color); font-size:12px; font-weight:bold;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                ${preset.likes || 0}
+            </div>
+        </div>
     `;
-    card.querySelector('.safe-title').textContent = p.title;
     container.appendChild(card);
 }
+
 
 window.interactPreset = async (id, action, e) => {
     e.stopPropagation();
@@ -620,11 +628,7 @@ if (!sessionId) {
 let BOT_USERNAME = null;
 fetch(`${API_URL}/api/bot_info`).then(r => r.json()).then(d => BOT_USERNAME = d.username).catch(console.error);
 
-document.getElementById('btnFastLogin').onclick = () => {
-    if (!BOT_USERNAME) { showToast("Бот загружается..."); return; }
-    document.getElementById('loginStatusText').textContent = "Ожидание авторизации в боте...";
-    window.open(`https://t.me/${BOT_USERNAME}?start=${sessionId}`, '_blank');
-};
+/* removed fastlogin logic */
 
 function connectWebSocket() {
   const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws';
@@ -637,11 +641,11 @@ function connectWebSocket() {
         applyPresetToUI(data.preset);
         showToast("Пресет загружен!");
       } else if (data.type === 'auth_success') {
-        currentUserId = data.user_id;
-        document.getElementById('authSection').style.display = 'none';
-        document.getElementById('profileSection').style.display = 'block';
-        fetchProfileData();
-        showToast('Успешный вход!');
+          currentUser = data;
+          if (typeof updateProfileUI !== 'undefined') {
+              updateProfileUI(currentUser);
+          }
+          showToast('✅ Аккаунт привязан!');
       }
     } catch (e) {}
   };
@@ -822,3 +826,135 @@ document.getElementById('btnPublishFromRewards').onclick = () => {
 renderFarms();
 fetchCommunityPresets();
 renderProfileLocalPresets();
+
+
+// Modes logic for mode select dropdowns
+function renderModeDropdowns() {
+    const listPublishMode = document.getElementById('listPublishMode');
+    if (listPublishMode) {
+        listPublishMode.innerHTML = '';
+        Object.keys(MODE_ICONS).forEach(mode => {
+            const li = document.createElement('li');
+            li.setAttribute('data-value', mode);
+            li.innerHTML = `
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <img src="${MODE_ICONS[mode]}" style="width:24px; height:24px; border-radius:4px;">
+                    <span>${mode}</span>
+                    <span class="mode-status-indicator" id="status_indicator_${mode.replace(/\\s+/g, '')}" style="margin-left:auto; width:10px; height:10px; border-radius:50%; background:var(--text-tertiary);"></span>
+                </div>
+            `;
+            listPublishMode.appendChild(li);
+        });
+
+        // Reattach events
+        listPublishMode.querySelectorAll('li').forEach(item => {
+            item.addEventListener('click', function() {
+                const dropDown = this.closest('.dropdown');
+                const btn = dropDown.querySelector('.dropdown-btn span');
+                btn.textContent = this.textContent.trim();
+                dropDown.setAttribute('data-value', this.getAttribute('data-value'));
+                dropDown.classList.remove('active');
+
+                // Color indication update
+                const modeName = this.getAttribute('data-value');
+                checkModeStatus(modeName, dropDown.querySelector('.dropdown-btn'));
+            });
+        });
+    }
+}
+
+async function checkModeStatus(mode, btnElement) {
+    if(!mode) return;
+    try {
+        const res = await fetch(`${API_URL}/api/mode/check?mode=${mode}`);
+        const data = await res.json();
+
+        if (data.available) {
+            btnElement.style.border = '1px solid var(--danger-color)'; // Red (Available for publishing)
+            btnElement.style.boxShadow = '0 0 10px rgba(239,68,68,0.2)';
+        } else {
+            btnElement.style.border = '1px solid var(--accent-emerald)'; // Green (Occupied)
+            btnElement.style.boxShadow = '0 0 10px rgba(16,185,129,0.2)';
+        }
+    } catch(e) {}
+}
+
+renderModeDropdowns();
+
+
+// Auth & TMA Logic
+let currentUser = null;
+
+async function handleDeepLinkAuth() {
+    try {
+        const res = await fetch(`${API_URL}/api/auth/generate`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ session_id: sessionId })
+        });
+        const data = await res.json();
+        if (data.auth_key) {
+            window.location.href = `https://t.me/tdslib_bot?start=${data.auth_key}`;
+        }
+    } catch(e) {
+        showToast('Ошибка генерации ключа');
+    }
+}
+
+function updateProfileUI(user) {
+    const profileGuest = document.getElementById('profileGuest');
+    const profileAuth = document.getElementById('profileAuth');
+    const profileAvatar = document.getElementById('profileAvatar');
+    const profileUsername = document.getElementById('profileUsername');
+
+    if (!user) {
+        if(profileGuest) profileGuest.style.display = 'block';
+        if(profileAuth) profileAuth.style.display = 'none';
+        return;
+    }
+
+    if(profileGuest) profileGuest.style.display = 'none';
+    if(profileAuth) profileAuth.style.display = 'block';
+    if(profileUsername) profileUsername.textContent = user.username || 'Аноним';
+
+    if (profileAvatar) {
+        if (user.photo_url) {
+            profileAvatar.innerHTML = `<img src="${user.photo_url}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
+        } else {
+            const firstLetter = (user.username || 'U').charAt(0).toUpperCase();
+            profileAvatar.innerHTML = firstLetter;
+        }
+    }
+
+    // Fetch stats
+    fetch(`${API_URL}/api/profile?user_id=${user.user_id}`)
+        .then(res => res.json())
+        .then(data => {
+            if(!data.error) {
+                const c = document.getElementById('statCreated'); if(c) c.textContent = data.created || 0;
+                const a = document.getElementById('statApproved'); if(a) a.textContent = data.approved || 0;
+                const l = document.getElementById('statLikes'); if(l) l.textContent = data.total_likes || 0;
+            }
+        }).catch(e => console.error(e));
+}
+
+function initTMAAuth() {
+    if (window.Telegram && window.Telegram.WebApp) {
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            currentUser = {
+                user_id: tg.initDataUnsafe.user.id,
+                username: tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name,
+                photo_url: tg.initDataUnsafe.user.photo_url
+            };
+            updateProfileUI(currentUser);
+        }
+    }
+}
+initTMAAuth();
+
+const btnConnect = document.getElementById('btnConnectTelegram');
+if(btnConnect) {
+    btnConnect.addEventListener('click', handleDeepLinkAuth);
+}

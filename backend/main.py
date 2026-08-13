@@ -58,6 +58,14 @@ async def init_db():
             interaction_type TEXT -- 'like', 'dislike', 'favorite'
         )
         ''')
+
+        await db.execute('''
+        CREATE TABLE IF NOT EXISTS auth_sessions (
+            auth_key TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''')
         await db.commit()
 
 # --- Shared State ---
@@ -87,23 +95,44 @@ async def update_user_stats(user_id: int, username: str, created: int = 0, appro
 @dp.message(Command("start"))
 async def start_handler(message: types.Message):
     args = message.text.split(maxsplit=1)
+    await upsert_user(message.from_user.id, message.from_user.username)
     if len(args) > 1:
-        session_id = args[1]
+        auth_key = args[1]
         user_id = message.from_user.id
-        if user_id not in user_sessions:
-            user_sessions[user_id] = {}
-        user_sessions[user_id]['session_id'] = session_id
 
-        # Notify web client of auth success
-        if session_id in active_websockets:
-            try:
-                await active_websockets[session_id].send_json({"type": "auth_success", "user_id": user_id, "username": message.from_user.username})
-            except:
-                pass
+        async with aiosqlite.connect(DB_FILE) as db:
+            async with db.execute("SELECT session_id FROM auth_sessions WHERE auth_key = ?", (auth_key,)) as cursor:
+                row = await cursor.fetchone()
 
-        await message.answer(f"✅ Web Session ID `{session_id}` connected! Авторизация на сайте прошла успешно. Now use /catalog to find and load a preset to your calculator.", parse_mode="Markdown")
+            if row:
+                session_id = row[0]
+                if user_id not in user_sessions:
+                    user_sessions[user_id] = {}
+                user_sessions[user_id]['session_id'] = session_id
+
+                # Update user in DB
+                await db.execute("UPDATE users SET username = ? WHERE user_id = ?", (message.from_user.username, user_id))
+                await db.commit()
+
+                # Notify web client of auth success
+                if session_id in active_websockets:
+                    try:
+                        await active_websockets[session_id].send_json({
+                            "type": "auth_success",
+                            "user_id": user_id,
+                            "username": message.from_user.username,
+                            "photo_url": "" # Handled client side fallback
+                        })
+                    except:
+                        pass
+
+                await db.execute("DELETE FROM auth_sessions WHERE auth_key = ?", (auth_key,))
+                await db.commit()
+                await message.answer(f"✅ Аккаунт успешно привязан к TDS Strategist!")
+            else:
+                await message.answer("❌ Недействительный или устаревший ключ авторизации.")
     else:
-        await message.answer("Welcome to TDS STRATEGIST Bot!\n\nUse /catalog to search and view presets.\nUse /top to see top strategists.\nUse /profile to view your stats.")
+        await message.answer("Добро пожаловать в TDS STRATEGIST Бот!\nОткрывайте мини-апп или привязывайте сессию с сайта.")
 
 @dp.message(Command("profile"))
 async def profile_handler(message: types.Message):
@@ -260,38 +289,79 @@ async def load_preset_callback(callback: types.CallbackQuery):
     await callback.answer()
 
 # Moderation features
-@dp.callback_query(F.data.startswith("mod_"))
+@dp.callback_query(F.data.startswith("approve_") | F.data.startswith("reject_") | F.data.startswith("replace_"))
 async def mod_callback(callback: types.CallbackQuery):
     if callback.from_user.id != ADMIN_ID:
         await callback.answer("You are not an admin.", show_alert=True)
         return
 
     parts = callback.data.split("_")
-    action = parts[1]
-    pid = int(parts[2])
-    author_id = int(parts[3])
+    action = parts[0]
+    pid = int(parts[1])
 
     async with aiosqlite.connect(DB_FILE) as db:
+        # Get author_id to notify
+        async with db.execute("SELECT user_id FROM presets WHERE id = ?", (pid,)) as cursor:
+            row = await cursor.fetchone()
+            author_id = row[0] if row else None
+
         if action == "approve":
             await db.execute("UPDATE presets SET status = 'approved' WHERE id = ?", (pid,))
-            await update_user_stats(author_id, "", approved=1)
-            await callback.message.edit_text(callback.message.text + "\n\n✅ **APPROVED**", parse_mode="Markdown")
+            if author_id: await update_user_stats(author_id, "", approved=1)
+            await callback.message.edit_text(callback.message.text + "\n\n✅ **ОДОБРЕНО**", parse_mode="Markdown")
             try:
-                await bot.send_message(author_id, "🎉 Your preset was approved and is now in the catalog!")
-            except:
-                pass
+                if author_id: await bot.send_message(author_id, "🎉 Ваш пресет был одобрен!")
+            except: pass
+        elif action == "replace":
+            mode = parts[2]
+            # Delete old active preset for this mode
+            await db.execute("DELETE FROM presets WHERE mode = ? AND status = 'approved'", (mode,))
+            # Approve new preset
+            await db.execute("UPDATE presets SET status = 'approved' WHERE id = ?", (pid,))
+            if author_id: await update_user_stats(author_id, "", approved=1)
+            await callback.message.edit_text(callback.message.text + "\n\n✅ **ЗАМЕНА ОДОБРЕНА**", parse_mode="Markdown")
+            try:
+                if author_id: await bot.send_message(author_id, "🎉 Ваша апелляция одобрена, пресет заменен!")
+            except: pass
         elif action == "reject":
             await db.execute("UPDATE presets SET status = 'rejected' WHERE id = ?", (pid,))
-            await callback.message.edit_text(callback.message.text + "\n\n❌ **REJECTED**", parse_mode="Markdown")
+            await callback.message.edit_text(callback.message.text + "\n\n❌ **ОТКЛОНЕНО**", parse_mode="Markdown")
             try:
-                await bot.send_message(author_id, "Your preset was rejected by moderation.")
-            except:
-                pass
+                if author_id: await bot.send_message(author_id, "К сожалению, ваш пресет был отклонен модератором.")
+            except: pass
         await db.commit()
 
     await callback.answer()
 
 # --- API Endpoints ---
+
+import uuid
+async def generate_auth_key_api(request):
+    try:
+        data = await request.json()
+        session_id = data.get('session_id')
+        if not session_id:
+            return web.json_response({"error": "session_id required"}, status=400)
+
+        auth_key = str(uuid.uuid4())
+        async with aiosqlite.connect(DB_FILE) as db:
+            await db.execute("INSERT INTO auth_sessions (auth_key, session_id) VALUES (?, ?)", (auth_key, session_id))
+            await db.commit()
+
+        return web.json_response({"auth_key": auth_key})
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=500)
+
+async def check_mode_availability_api(request):
+    try:
+        mode = request.query.get('mode')
+        async with aiosqlite.connect(DB_FILE) as db:
+            async with db.execute("SELECT id FROM presets WHERE mode = ? AND status = 'approved'", (mode,)) as cursor:
+                row = await cursor.fetchone()
+        return web.json_response({"available": row is None})
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=500)
+
 async def publish_preset_api(request):
     try:
         data = await request.json()
@@ -300,8 +370,9 @@ async def publish_preset_api(request):
         players = data.get('players')
         preset_data = data.get('presetData')
         author_username = data.get('username', 'Anonymous')
+        is_appeal = data.get('is_appeal', False)
+        appeal_reason = data.get('appeal_reason', '')
 
-        # Use provided user_id if available, otherwise generate a dummy one
         author_id = data.get('user_id')
         if not author_id:
             author_id = hash(author_username) % 1000000000
@@ -545,6 +616,8 @@ async def app_middleware(app, handler):
 
 app = web.Application(middlewares=[app_middleware])
 app.router.add_get('/ws', websocket_handler)
+app.router.add_post('/api/auth/generate', generate_auth_key_api)
+app.router.add_get('/api/mode/check', check_mode_availability_api)
 app.router.add_post('/api/publish', publish_preset_api)
 app.router.add_get('/api/presets', get_presets_api)
 app.router.add_post('/api/tma/apply', apply_preset_tma_api)

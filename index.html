@@ -6,6 +6,7 @@
     <title>TDS Strategist Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./src/style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
 
@@ -319,25 +320,44 @@
             <p id="publishStatus" style="font-size:0.8rem; margin-top:8px; text-align:center;"></p>
         </div>
 
+
         <!-- Profile Tab -->
         <div id="lib-profile" class="tab-pane" style="display:none;">
             <div id="profileSection">
-                <div id="authSection" style="text-align: center; margin-bottom: 1.5rem;">
-                    <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem;" id="loginHintText">
-                        Локальный профиль (Гость). Для публикации в общую библиотеку войдите через Telegram.
-                    </p>
-                    <button class="btn btn-primary liquid-btn" id="btnFastLogin" style="width:100%;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"></path><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                        Войти через Telegram
+                <div id="profileGuest">
+                    <div style="background: var(--bg-card); border: 1px solid var(--danger-color); border-radius: 12px; padding: 20px; margin-bottom: 20px; text-align: center;">
+                        <h3 style="margin-top:0; color: var(--danger-color);">Вы не вошли в аккаунт</h3>
+                        <p style="color: var(--text-secondary); font-size: 0.9em;">Для публикации и сохранения пресетов подключите Telegram.</p>
+                    </div>
+                    <button class="btn btn-accent liquid-btn" id="btnConnectTelegram" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        📱 Подключить Telegram
                     </button>
-                    <p id="loginStatusText" style="font-size:0.8rem; margin-top:8px; color:var(--accent-emerald); text-align:center;"></p>
                 </div>
-                <div class="stats-grid" id="profileStatsContainer" style="display:none;"></div>
+
+                <div id="profileAuth" style="display: none; text-align: center;">
+                    <div id="profileAvatar" style="width: 80px; height: 80px; border-radius: 50%; background: var(--accent-emerald); color: white; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; margin: 0 auto 15px;"></div>
+                    <h2 id="profileUsername" style="margin: 0 0 5px 0;"></h2>
+                    <div style="display: flex; justify-content: space-around; background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border-light); margin-top: 20px;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 24px; font-weight: bold; color: var(--accent-emerald);" id="statCreated">0</div>
+                            <div style="font-size: 12px; color: var(--text-tertiary);">Создано</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 24px; font-weight: bold; color: var(--accent-emerald);" id="statApproved">0</div>
+                            <div style="font-size: 12px; color: var(--text-tertiary);">Одобрено</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 24px; font-weight: bold; color: var(--accent-emerald);" id="statLikes">0</div>
+                            <div style="font-size: 12px; color: var(--text-tertiary);">Лайки</div>
+                        </div>
+                    </div>
+                </div>
 
                 <h3 style="margin-top:16px; font-size:1rem;">Сохраненные локально пресеты</h3>
                 <ul class="dropdown-list custom-scrollbar" id="listProfileLocalPresets" style="display:block; position:static; opacity:1; transform:none; margin-bottom: 1rem; background: var(--bg-input);">
                     <!-- Injected locally -->
                 </ul>
+
 
                 <h3 style="margin-top:16px; font-size:1rem;">Мои публикации</h3>
                 <div id="my-presets-list" class="presets-list"></div>
@@ -372,3 +392,19 @@
 <script type="module" src="./src/main.js"></script>
 </body>
 </html>
+<!-- Appeal Modal -->
+<div id="appealModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <h3 style="color: var(--danger-color); margin-top: 0;">Режим занят</h3>
+        <p style="color: var(--text-secondary); font-size: 0.9em; margin-bottom: 20px;">
+            В режиме <strong id="appealModeText" style="color: white;"></strong> уже существует одобренный пресет.
+            Вы можете подать заявку модератору на его замену, если ваш пресет лучше.
+        </p>
+        <textarea id="inpAppealReason" class="input-field" placeholder="Опишите, почему ваш пресет лучше..." rows="3" style="width: 100%; margin-bottom: 15px; resize: none;"></textarea>
+
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-primary" style="flex: 1; background: var(--bg-card);" onclick="document.getElementById('appealModal').classList.remove('active');">Отмена</button>
+            <button class="btn btn-accent" style="flex: 1;" onclick="doPublish(true, document.getElementById('inpAppealReason').value)">⚠️ Подать заявку</button>
+        </div>
+    </div>
+</div>

@@ -27,13 +27,18 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+html, body {
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  position: fixed;
+}
+
 body {
   font-family: var(--font-family);
   background-color: var(--bg-dark);
   color: var(--text-primary);
   line-height: 1.5;
-  min-height: 100vh;
-  overflow-x: hidden;
   position: relative;
 }
 
@@ -336,7 +341,7 @@ header {
   flex-direction: column;
   gap: 6px;
   max-height: 300px;
-  overflow-y: auto;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
   transition: max-height 0.3s ease, opacity 0.3s ease, margin-top 0.3s ease;
 }
 
@@ -432,7 +437,7 @@ header {
 .drawer-content {
   padding: 1rem;
   flex-grow: 1;
-  overflow-y: auto;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
 }
 
 /* Inputs within Drawer */
@@ -554,7 +559,7 @@ header {
   border-radius: 8px;
   margin-top: 4px;
   max-height: 200px;
-  overflow-y: auto;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
   z-index: 10;
   display: none;
   opacity: 0;
@@ -827,3 +832,20 @@ header {
   transition: background 0.2s;
 }
 .btn-sell:hover { background: rgba(239, 68, 68, 0.2); }
+
+/* App UI refinements */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0,0,0,0.8); z-index: 10000;
+    display: none; align-items: center; justify-content: center;
+}
+.modal-overlay.active { display: flex; }
+
+.modal-content {
+    background: var(--bg-dark);
+    border: 1px solid var(--border-hover);
+    border-radius: 16px;
+    padding: 24px;
+    width: 90%;
+    max-width: 500px;
+}
