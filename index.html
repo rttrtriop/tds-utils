@@ -1,219 +1,323 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TDS STRATEGIST</title>
-    <link rel="stylesheet" href="./src/style.css" />
-  </head>
-  <body>
-    <div id="app">
-      <header class="header">
-        <h1>TDS STRATEGIST</h1>
-        <div class="header-right">
-          <button id="community-btn" class="secondary-btn">Community Presets</button>
-          <button id="login-btn" class="primary-btn" style="margin-top:0;">Sign In</button>
-          <div class="session-info">
-            <span>Session ID:</span>
-            <span id="session-id" class="accent-text"></span>
-          </div>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TDS Strategist Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+
+<!-- Liquid UI Filter -->
+<svg style="visibility: hidden; position: absolute;" width="0" height="0" xmlns="http://www.w3.org/2000/svg" version="1.1">
+    <defs>
+        <filter id="liquid">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+            <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" result="liquid" />
+            <feBlend in="SourceGraphic" in2="liquid" />
+        </filter>
+    </defs>
+</svg>
+
+<canvas id="bg-canvas"></canvas>
+
+<div class="app-container">
+    <header>
+        <div class="logo">
+            <h1>TDS СТРАТЕГ</h1>
+            <p>Премиум симулятор ферм и волн</p>
         </div>
-      </header>
-
-      <!-- Login Modal -->
-      <div id="login-modal" class="modal">
-        <div class="modal-content" style="text-align:center;">
-          <span class="close-login-btn close-btn">&times;</span>
-          <h2>Sign In</h2>
-          <p>Connect your Telegram account to sync your presets, likes, and favorites.</p>
-          <button id="fast-login-btn" class="primary-btn" style="margin-top: 1rem; width: auto;">📱 Быстрый вход через Telegram</button>
-          <p id="login-status" style="margin-top: 1rem; color: var(--accent-color); display: none;">Waiting for bot confirmation...</p>
+        <div class="header-actions">
+            <button class="btn liquid-btn" id="btnOpenLibraryDrawer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                Сообщество
+            </button>
+            <button class="btn liquid-btn" id="btnOpenSettingsDrawer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                Настройки
+            </button>
+            <button class="btn btn-accent liquid-btn" id="btnOpenRewardsDrawer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                Награды за волны
+            </button>
         </div>
-      </div>
+    </header>
 
-      <!-- Community Presets Modal -->
-      <div id="community-modal" class="modal">
-        <div class="modal-content">
-          <span class="close-btn">&times;</span>
-          <h2>Community Presets</h2>
-
-          <div class="modal-tabs">
-            <button id="tab-browse" class="tab-btn active">Browse</button>
-            <button id="tab-publish" class="tab-btn">Publish</button>
-            <button id="tab-favorites" class="tab-btn">Favorites</button>
-            <button id="tab-my-presets" class="tab-btn">My Presets</button>
-            <button id="tab-profile" class="tab-btn">Profile</button>
-          </div>
-
-          <!-- Browse Tab -->
-          <div id="browse-section" class="tab-content active">
-            <div class="filter-group">
-              <label for="filter-mode">Filter by Mode:</label>
-              <select id="filter-mode">
-                <option value="All">All</option>
-                <option value="Easy">Easy</option>
-                <option value="Casual">Casual</option>
-                <option value="Intermediate">Intermediate</option>
-                <option value="Molten">Molten</option>
-                <option value="Fallen">Fallen</option>
-                <option value="Frost">Frost</option>
-                <option value="Hardcore">Hardcore</option>
-                <option value="Voidcore">Voidcore</option>
-                <option value="Pizza Party">Pizza Party</option>
-                <option value="Badlands II">Badlands II</option>
-                <option value="Polluted Wasteland II">Polluted Wasteland II</option>
-              </select>
+    <div class="main-content">
+        <!-- Deck Card -->
+        <div class="card liquid-card">
+            <div class="card-header">
+                <span>Активная колода ферм</span>
+                <span id="lblDeckIncome" style="color: var(--accent-emerald);">+$0 / волна</span>
             </div>
 
-            <div class="presets-list" id="presets-list">
-              <!-- Presets will be loaded here -->
+            <div class="quick-actions" style="margin-bottom: 8px;">
+                <button class="badge-btn liquid-btn" id="btnAddFarm0">+ Ферма Ур 0 ($300)</button>
+                <button class="badge-btn liquid-btn" id="btnPreset5x2">5x Ур 2</button>
+                <button class="badge-btn liquid-btn" id="btnPreset10x3">10x Ур 3</button>
+                <button class="badge-btn liquid-btn danger-btn" id="btnClearDeck">Очистить</button>
             </div>
-          </div>
 
-          <!-- Publish Tab -->
-          <div id="publish-section" class="tab-content">
-            <div class="input-group">
-              <label for="preset-title">Preset Title</label>
-              <input type="text" id="preset-title" placeholder="e.g., Solo Hardcore Strat" />
+            <div class="farm-deck custom-scrollbar" id="farmDeckList">
+                <!-- Farm items injected via JS -->
             </div>
-            <div class="input-group">
-              <label for="author-name">Your Name (Optional)</label>
-              <input type="text" id="author-name" placeholder="Anonymous" />
-            </div>
-            <p class="publish-note">This will publish your current calculator configuration for moderation.</p>
-            <button id="publish-submit-btn" class="primary-btn">Submit Preset</button>
-            <div id="publish-status" class="status-msg"></div>
-          </div>
 
-          <!-- Favorites Tab -->
-          <div id="favorites-section" class="tab-content">
-            <div class="presets-list" id="favorites-list">
-              <p>Favorites functionality coming soon (requires full login API).</p>
+            <div style="font-size: 0.75rem; color: var(--text-tertiary); text-align: center; margin-top: auto;">
+                <span id="lblDeckCount">0/10 Ферм</span>
             </div>
-          </div>
-
-          <!-- My Presets Tab -->
-          <div id="my-presets-section" class="tab-content">
-            <div class="presets-list" id="my-presets-list">
-              <p>My Presets functionality coming soon (requires full login API).</p>
-            </div>
-          </div>
-
-          <!-- Profile Tab -->
-          <div id="profile-section" class="tab-content">
-            <div class="stats-grid" id="profile-stats">
-              <p>Profile functionality coming soon (requires full login API).</p>
-            </div>
-          </div>
         </div>
-      </div>
 
-      <main class="main-content">
-        <section class="config-panel">
-          <h2>Configuration</h2>
-
-          <div class="input-group">
-            <label for="mode-select">Game Mode</label>
-            <select id="mode-select">
-              <option value="Easy">Easy</option>
-              <option value="Casual">Casual</option>
-              <option value="Intermediate">Intermediate</option>
-              <option value="Molten">Molten</option>
-              <option value="Fallen">Fallen</option>
-              <option value="Frost">Frost</option>
-              <option value="Hardcore">Hardcore</option>
-              <option value="Voidcore">Voidcore</option>
-              <option value="Pizza Party">Pizza Party</option>
-              <option value="Badlands II">Badlands II</option>
-              <option value="Polluted Wasteland II">Polluted Wasteland II</option>
-            </select>
-          </div>
-
-          <div class="input-group">
-            <label for="players-select">Players</label>
-            <select id="players-select">
-              <option value="1">1P - Solo</option>
-              <option value="2">2P - Duo</option>
-              <option value="3">3P - Trio</option>
-              <option value="4">4P - Squad</option>
-            </select>
-          </div>
-
-          <div class="grid-2">
-            <div class="input-group">
-              <label for="start-wave">Start Wave</label>
-              <input type="number" id="start-wave" value="0" min="0" />
-            </div>
-            <div class="input-group">
-              <label for="target-wave">Target Wave</label>
-              <input type="number" id="target-wave" value="40" min="1" />
-            </div>
-          </div>
-
-          <div class="grid-2">
-            <div class="input-group">
-              <label for="start-cash">Start Cash</label>
-              <input type="number" id="start-cash" value="600" min="0" />
-            </div>
-            <div class="input-group">
-              <label for="target-cash">Target Cash</label>
-              <input type="number" id="target-cash" value="10000" min="0" />
-            </div>
-          </div>
-
-          <div class="grid-2">
-            <div class="input-group checkbox-group">
-              <input type="checkbox" id="wave-rewards-active" />
-              <label for="wave-rewards-active">Wave Rewards</label>
+        <!-- Strategy Card -->
+        <div class="card liquid-card">
+            <div class="card-header">
+                <span>Вердикт симуляции</span>
             </div>
 
-            <div class="input-group checkbox-group locked">
-              <input type="checkbox" id="no-skill-tree" checked disabled />
-              <label for="no-skill-tree">No Skill Tree 🔒</label>
+            <div class="verdict-banner realizable" id="verdictBanner">
+                <h2 id="verdictTitle">ВЫПОЛНИМО</h2>
+                <p id="verdictSub">Чистые деньги (без продажи)</p>
             </div>
-          </div>
 
-          <button id="run-btn" class="primary-btn">Run Simulation</button>
-        </section>
+            <div class="metrics-row">
+                <div class="metric">
+                    <span class="lbl">Чистые деньги</span>
+                    <span class="val emerald" id="valPureCash">$0</span>
+                </div>
+                <div class="metric">
+                    <span class="lbl">Общий доход</span>
+                    <span class="val" id="valTotalIncome" style="color: var(--text-primary);">+$0</span>
+                </div>
+            </div>
 
-        <section class="farms-panel">
-          <div class="farms-header">
-            <h2>ACTIVE FARM DECK (<span id="farm-count">0</span>/10)</h2>
-            <div class="farms-actions">
-              <button id="add-farm-btn" class="secondary-btn">+ Farm Lvl 0 ($300)</button>
-              <button id="clear-farms-btn" class="danger-btn">Clear</button>
+            <div class="card-header" style="margin-top: 8px;">
+                <span>План действий</span>
+                <div style="display: flex; gap: 8px;">
+                    <button class="badge-btn liquid-btn" id="btnRunSim">▶ Симулировать</button>
+                    <button class="badge-btn liquid-btn" id="btnToggleDetailed">Детали</button>
+                </div>
             </div>
-          </div>
-          <div class="farms-container" id="farms-container">
-            <!-- Farm cards will be injected here -->
-          </div>
-        </section>
 
-        <section class="results-panel" id="results-panel">
-          <h2>Simulation Results</h2>
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-label">Total Income</div>
-              <div class="stat-value accent-text" id="res-total-income">0</div>
+            <div class="strategy-list custom-scrollbar" id="strategyList">
+                <!-- Strategy steps injected via JS -->
             </div>
-            <div class="stat-card">
-              <div class="stat-label">Pure Cash at End</div>
-              <div class="stat-value accent-text" id="res-pure-cash">0</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Max Wealth (Sell All)</div>
-              <div class="stat-value accent-text" id="res-max-wealth">0</div>
-            </div>
-          </div>
+        </div>
+    </div>
+</div>
 
-          <h3>Action Plan</h3>
-          <div class="action-plan" id="action-plan-container">
-            <!-- Action plan rows will be injected here -->
-          </div>
-        </section>
-      </main>
+<!-- Drawer Overlay -->
+<div class="drawer-overlay" id="drawerOverlay"></div>
+
+<!-- Settings Drawer -->
+<div class="drawer" id="settingsDrawer">
+    <div class="drawer-header">
+        <span>Настройки симуляции</span>
+        <button class="btn liquid-btn" style="padding: 4px 8px;" id="btnCloseSettingsDrawer">✕</button>
+    </div>
+    <div class="drawer-content custom-scrollbar">
+        <div class="input-group">
+            <label>Текущая волна</label>
+            <div class="input-control liquid-input">
+                <button class="input-btn" onclick="adjustVal('inpCurrentWave', -1)">-</button>
+                <input type="number" id="inpCurrentWave" value="0" min="0">
+                <button class="input-btn" onclick="adjustVal('inpCurrentWave', 1)">+</button>
+            </div>
+        </div>
+        <div class="input-group">
+            <label>Целевая волна</label>
+            <div class="input-control liquid-input">
+                <button class="input-btn" onclick="adjustVal('inpTargetWave', -1)">-</button>
+                <input type="number" id="inpTargetWave" value="20" min="1">
+                <button class="input-btn" onclick="adjustVal('inpTargetWave', 1)">+</button>
+            </div>
+        </div>
+        <div class="input-group">
+            <label>Начальные деньги ($)</label>
+            <div class="input-control liquid-input">
+                <button class="input-btn" onclick="adjustVal('inpStartCash', -50)">-</button>
+                <input type="number" id="inpStartCash" value="300" min="0" step="50">
+                <button class="input-btn" onclick="adjustVal('inpStartCash', 50)">+</button>
+            </div>
+            <div class="quick-actions" style="margin-top: 4px;">
+                <button class="badge-btn liquid-btn" onclick="addVal('inpStartCash', -500)">-500</button>
+                <button class="badge-btn liquid-btn" onclick="addVal('inpStartCash', 500)">+500</button>
+                <button class="badge-btn liquid-btn" onclick="addVal('inpStartCash', 1000)">+1k</button>
+            </div>
+        </div>
+        <div class="input-group">
+            <label>Целевые деньги ($)</label>
+            <div class="input-control liquid-input">
+                <button class="input-btn" onclick="adjustVal('inpTargetCash', -500)">-</button>
+                <input type="number" id="inpTargetCash" value="25000" min="0" step="500">
+                <button class="input-btn" onclick="adjustVal('inpTargetCash', 500)">+</button>
+            </div>
+            <div class="quick-actions" style="margin-top: 4px;">
+                <button class="badge-btn liquid-btn" onclick="addVal('inpTargetCash', -1000)">-1k</button>
+                <button class="badge-btn liquid-btn" onclick="addVal('inpTargetCash', 1000)">+1k</button>
+                <button class="badge-btn liquid-btn" onclick="addVal('inpTargetCash', 5000)">+5k</button>
+            </div>
+        </div>
+        <div class="input-group">
+            <label>Без Дерева Навыков 🔒</label>
+            <div class="custom-toggle locked">
+                <div class="toggle-knob active"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Rewards Drawer -->
+<div class="drawer" id="rewardsDrawer">
+    <div class="drawer-header">
+        <span>Награды за волны</span>
+        <button class="btn liquid-btn" style="padding: 4px 8px;" id="btnCloseRewardsDrawer">✕</button>
+    </div>
+    <div class="drawer-content custom-scrollbar">
+        <label style="display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer;">
+            Включить доход за волны
+            <div class="custom-toggle" id="toggleWaveRewards" data-active="true">
+                <div class="toggle-knob active"></div>
+            </div>
+        </label>
+
+        <div class="input-group">
+            <label>Сохраненные пресеты наград</label>
+
+            <!-- Custom Dropdown for Modes -->
+            <div class="custom-dropdown" id="dropdownMode" data-value="Easy">
+                <div class="dropdown-selected liquid-input">
+                    <span class="selected-text">Easy</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+                <ul class="dropdown-list custom-scrollbar">
+                    <li data-value="Easy">Easy</li>
+                    <li data-value="Casual">Casual</li>
+                    <li data-value="Intermediate">Intermediate</li>
+                    <li data-value="Molten">Molten</li>
+                    <li data-value="Fallen">Fallen</li>
+                    <li data-value="Frost">Frost</li>
+                    <li data-value="Hardcore">Hardcore</li>
+                    <li data-value="Voidcore">Voidcore</li>
+                    <li data-value="Pizza Party">Pizza Party</li>
+                    <li data-value="Badlands II">Badlands II</li>
+                    <li data-value="Polluted Wasteland II">Polluted Wasteland II</li>
+                </ul>
+            </div>
+
+            <!-- Custom Dropdown for Players -->
+            <div class="custom-dropdown" style="margin-top:8px;" id="dropdownPlayers" data-value="1">
+                <div class="dropdown-selected liquid-input">
+                    <span class="selected-text">1P - Solo</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+                <ul class="dropdown-list custom-scrollbar">
+                    <li data-value="1">1P - Solo</li>
+                    <li data-value="2">2P - Duo</li>
+                    <li data-value="3">3P - Trio</li>
+                    <li data-value="4">4P - Squad</li>
+                </ul>
+            </div>
+
+            <div style="display: flex; gap: 8px; margin-top: 8px;">
+                <input type="text" id="inpPresetName" placeholder="Название..." style="flex: 1; outline: none; font-size: 0.8rem;" class="liquid-input">
+                <button class="btn btn-primary liquid-btn" style="padding: 6px 12px;" id="btnSavePresetLocally">Сохранить локально</button>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 8px;">
+                <div class="custom-dropdown" id="dropdownLocalPresets" data-value="" style="flex: 1;">
+                    <div class="dropdown-selected liquid-input">
+                        <span class="selected-text">Выберите локальный пресет...</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </div>
+                    <ul class="dropdown-list custom-scrollbar" id="listLocalPresets">
+                        <!-- Populated via JS -->
+                    </ul>
+                </div>
+                <button class="btn liquid-btn" style="padding: 6px 12px;" id="btnLoadLocalPreset">Загрузить</button>
+                <button class="btn liquid-btn danger-btn" style="padding: 6px 12px;" id="btnDeleteLocalPreset">Удалить</button>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label>Кол-во волн в режиме (1-100)</label>
+            <div class="input-control liquid-input">
+                <input type="number" id="inpModeWaves" value="40" min="1" max="100">
+            </div>
+        </div>
+
+        <div class="wave-grid" id="waveGridContainer">
+            <!-- Injected via JS -->
+        </div>
+    </div>
+</div>
+
+<!-- Library Drawer (Community & Profile) -->
+<div class="drawer" id="libraryDrawer">
+    <div class="drawer-header">
+        <span>Библиотека & Профиль</span>
+        <button class="btn liquid-btn" style="padding: 4px 8px;" id="btnCloseLibraryDrawer">✕</button>
     </div>
 
-    <script type="module" src="./src/main.js"></script>
-  </body>
+    <div class="drawer-tabs">
+        <button class="tab-btn active" data-target="lib-catalog">Каталог</button>
+        <button class="tab-btn" data-target="lib-publish">Публикация</button>
+        <button class="tab-btn" data-target="lib-profile">Профиль</button>
+    </div>
+
+    <div class="drawer-content custom-scrollbar">
+        <!-- Catalog Tab -->
+        <div id="lib-catalog" class="tab-pane active">
+            <div class="custom-dropdown" id="dropdownCatalogFilter" data-value="All" style="margin-bottom:16px;">
+                <div class="dropdown-selected liquid-input">
+                    <span class="selected-text">Все режимы</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+                <ul class="dropdown-list custom-scrollbar">
+                    <li data-value="All">Все режимы</li>
+                    <li data-value="Easy">Easy</li>
+                    <li data-value="Fallen">Fallen</li>
+                    <li data-value="Hardcore">Hardcore</li>
+                    <!-- Add more if needed -->
+                </ul>
+            </div>
+            <div id="community-presets-list" class="presets-list">
+                <!-- Fetch from backend -->
+                <p>Загрузка...</p>
+            </div>
+        </div>
+
+        <!-- Publish Tab -->
+        <div id="lib-publish" class="tab-pane" style="display:none;">
+            <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem;">
+                Опубликовать текущие настройки наград (Wave Rewards Preset) в общую базу.
+            </p>
+            <div class="input-group">
+                <label>Имя в базе</label>
+                <input type="text" id="inpPublishTitle" class="liquid-input" placeholder="Супер фарм..." style="width:100%; padding:8px;">
+            </div>
+            <button class="btn btn-primary liquid-btn" id="btnPublishPreset" style="width:100%;">Опубликовать</button>
+            <p id="publishStatus" style="font-size:0.8rem; margin-top:8px; text-align:center;"></p>
+        </div>
+
+        <!-- Profile Tab -->
+        <div id="lib-profile" class="tab-pane" style="display:none;">
+            <div id="authSection">
+                <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem;">
+                    Для сохранения и лайков войдите через Telegram.
+                </p>
+                <button class="btn btn-primary liquid-btn" id="btnFastLogin" style="width:100%;">📱 Войти через Telegram</button>
+                <p id="loginStatusText" style="font-size:0.8rem; margin-top:8px; color:var(--accent-emerald); text-align:center;"></p>
+            </div>
+            <div id="profileSection" style="display:none;">
+                <div class="stats-grid" id="profileStatsContainer"></div>
+                <h3 style="margin-top:16px; font-size:1rem;">Мои пресеты</h3>
+                <div id="my-presets-list" class="presets-list"></div>
+                <h3 style="margin-top:16px; font-size:1rem;">Избранное</h3>
+                <div id="favorites-list" class="presets-list"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
 </html>

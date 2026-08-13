@@ -1,0 +1,11 @@
+
+> app@1.0.0 dev
+> vite --host
+
+Port 5173 is in use, trying another one...
+
+  VITE v8.2.1  ready in 317 ms
+
+  ➜  Local:   http://localhost:5174/
+  ➜  Network: http://192.168.0.2:5174/  eth0
+8:54:56 AM [vite] (client) page reload index.html

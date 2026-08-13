@@ -1,37 +1,332 @@
 import { FARM_STATS, runSimulation, compactAggregateHistory } from './logic.js';
 
-let sessionId = sessionStorage.getItem('sessionId');
-if (!sessionId) {
-  sessionId = Math.floor(100000 + Math.random() * 900000).toString();
-  sessionStorage.setItem('sessionId', sessionId);
+// --- Background Canvas ---
+const canvas = document.getElementById('bg-canvas');
+const ctx = canvas.getContext('2d');
+let width, height;
+let leaves = [];
+let mouseX = -1000;
+let mouseY = -1000;
+
+function resize() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
 }
-document.getElementById('session-id').textContent = sessionId;
+window.addEventListener('resize', resize);
+resize();
 
-// State
-let farms = []; // Array of levels (0-5)
+window.addEventListener('mousemove', e => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+});
+window.addEventListener('touchmove', e => {
+    if (e.touches.length > 0) {
+        mouseX = e.touches[0].clientX;
+        mouseY = e.touches[0].clientY;
+    }
+});
 
-// DOM Elements
-const farmsContainer = document.getElementById('farms-container');
-const farmCountSpan = document.getElementById('farm-count');
-const addFarmBtn = document.getElementById('add-farm-btn');
-const clearFarmsBtn = document.getElementById('clear-farms-btn');
-const runBtn = document.getElementById('run-btn');
+class Leaf {
+    constructor() {
+        this.reset();
+        this.y = Math.random() * height; // initial random spread
+    }
+    reset() {
+        this.x = Math.random() * width;
+        this.y = -20;
+        this.size = Math.random() * 8 + 4;
+        this.speedY = Math.random() * 0.5 + 0.2;
+        this.speedX = Math.random() * 0.4 - 0.2;
+        this.angle = Math.random() * Math.PI * 2;
+        this.spin = Math.random() * 0.02 - 0.01;
+        this.opacity = Math.random() * 0.3 + 0.1;
+    }
+    update() {
+        this.y += this.speedY;
+        this.x += this.speedX + Math.sin(this.y * 0.01) * 0.5;
+        this.angle += this.spin;
 
-// Inputs
-const modeSelect = document.getElementById('mode-select');
-const playersSelect = document.getElementById('players-select');
-const startWaveIn = document.getElementById('start-wave');
-const targetWaveIn = document.getElementById('target-wave');
-const startCashIn = document.getElementById('start-cash');
-const targetCashIn = document.getElementById('target-cash');
-const waveRewardsActive = document.getElementById('wave-rewards-active');
+        // Interaction
+        let dx = mouseX - this.x;
+        let dy = mouseY - this.y;
+        let dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 100) {
+            let force = (100 - dist) / 100;
+            this.x -= (dx / dist) * force * 5;
+            this.y -= (dy / dist) * force * 5;
+        }
 
-// Results
-const resTotalIncome = document.getElementById('res-total-income');
-const resPureCash = document.getElementById('res-pure-cash');
-const resMaxWealth = document.getElementById('res-max-wealth');
-const actionPlanContainer = document.getElementById('action-plan-container');
+        if (this.y > height + 20 || this.x < -20 || this.x > width + 20) {
+            this.reset();
+        }
+    }
+    draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle);
+        ctx.fillStyle = `rgba(16, 185, 129, ${this.opacity})`;
+        ctx.beginPath();
+        // Simple leaf shape
+        ctx.ellipse(0, 0, this.size, this.size / 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
 
+for (let i = 0; i < 40; i++) leaves.push(new Leaf());
+
+function animateCanvas() {
+    ctx.clearRect(0, 0, width, height);
+    leaves.forEach(l => {
+        l.update();
+        l.draw();
+    });
+    requestAnimationFrame(animateCanvas);
+}
+animateCanvas();
+
+// --- Drawers Logic ---
+const overlay = document.getElementById('drawerOverlay');
+const settingsDrawer = document.getElementById('settingsDrawer');
+const rewardsDrawer = document.getElementById('rewardsDrawer');
+const libraryDrawer = document.getElementById('libraryDrawer');
+
+function openDrawer(drawer) {
+    overlay.classList.add('active');
+    drawer.classList.add('active');
+}
+
+function closeAllDrawers() {
+    overlay.classList.remove('active');
+    settingsDrawer.classList.remove('active');
+    rewardsDrawer.classList.remove('active');
+    libraryDrawer.classList.remove('active');
+}
+
+document.getElementById('btnOpenSettingsDrawer').onclick = () => openDrawer(settingsDrawer);
+document.getElementById('btnOpenRewardsDrawer').onclick = () => openDrawer(rewardsDrawer);
+document.getElementById('btnOpenLibraryDrawer').onclick = () => openDrawer(libraryDrawer);
+
+document.getElementById('btnCloseSettingsDrawer').onclick = closeAllDrawers;
+document.getElementById('btnCloseRewardsDrawer').onclick = closeAllDrawers;
+document.getElementById('btnCloseLibraryDrawer').onclick = closeAllDrawers;
+overlay.onclick = closeAllDrawers;
+
+// --- Custom Inputs ---
+window.adjustVal = (id, delta) => {
+    let el = document.getElementById(id);
+    let v = parseInt(el.value) + delta;
+    if (v < parseInt(el.min)) v = parseInt(el.min);
+    if (el.max && v > parseInt(el.max)) v = parseInt(el.max);
+    el.value = v;
+    if (id === 'inpModeWaves') renderWaveGrid();
+};
+
+window.addVal = (id, amt) => {
+    let el = document.getElementById(id);
+    let v = parseInt(el.value) + amt;
+    if (v < parseInt(el.min)) v = parseInt(el.min);
+    el.value = v;
+};
+
+// Custom Dropdowns
+function initCustomDropdown(dropdown) {
+    const selected = dropdown.querySelector('.dropdown-selected');
+    const text = selected.querySelector('.selected-text');
+    const list = dropdown.querySelector('.dropdown-list');
+
+    selected.onclick = (e) => {
+        e.stopPropagation();
+        // Close others
+        document.querySelectorAll('.custom-dropdown').forEach(d => {
+            if (d !== dropdown) d.classList.remove('open');
+        });
+        dropdown.classList.toggle('open');
+    };
+
+    list.querySelectorAll('li').forEach(item => {
+        item.onclick = () => {
+            text.textContent = item.textContent;
+            dropdown.setAttribute('data-value', item.getAttribute('data-value'));
+            dropdown.classList.remove('open');
+            // Trigger change event logic if needed
+            if (dropdown.id === 'dropdownCatalogFilter') fetchCommunityPresets();
+        };
+    });
+}
+
+document.querySelectorAll('.custom-dropdown').forEach(initCustomDropdown);
+document.addEventListener('click', () => {
+    document.querySelectorAll('.custom-dropdown').forEach(d => d.classList.remove('open'));
+});
+
+// Custom Toggles
+document.querySelectorAll('.custom-toggle:not(.locked)').forEach(toggle => {
+    toggle.onclick = () => {
+        let isActive = toggle.getAttribute('data-active') === 'true';
+        toggle.setAttribute('data-active', !isActive);
+    };
+});
+
+// --- Wave Rewards Grid ---
+const waveGridContainer = document.getElementById('waveGridContainer');
+const inpModeWaves = document.getElementById('inpModeWaves');
+let waveRewardsData = Array(100).fill(0);
+
+function renderWaveGrid() {
+    let count = parseInt(inpModeWaves.value);
+    if (count < 1) count = 1;
+    if (count > 100) count = 100;
+
+    waveGridContainer.innerHTML = '';
+    for (let i = 0; i < count; i++) {
+        let cell = document.createElement('div');
+        cell.className = 'wave-cell';
+        cell.innerHTML = `
+            <div class="wave-cell-num">W${i+1}</div>
+            <input type="number" class="wave-cell-val" data-idx="${i}" value="${waveRewardsData[i] || 0}" min="0">
+        `;
+        waveGridContainer.appendChild(cell);
+    }
+
+    waveGridContainer.querySelectorAll('.wave-cell-val').forEach(inp => {
+        inp.onchange = (e) => {
+            let idx = parseInt(e.target.getAttribute('data-idx'));
+            waveRewardsData[idx] = parseInt(e.target.value) || 0;
+        };
+    });
+}
+inpModeWaves.onchange = renderWaveGrid;
+renderWaveGrid();
+
+// --- Local Presets Logic ---
+function loadLocalPresetsList() {
+    const list = document.getElementById('listLocalPresets');
+    list.innerHTML = '';
+
+    let presets = {};
+    try {
+        presets = JSON.parse(localStorage.getItem('tdsLocalPresets')) || {};
+    } catch(e) {}
+
+    const keys = Object.keys(presets);
+    if (keys.length === 0) {
+        document.getElementById('dropdownLocalPresets').querySelector('.selected-text').textContent = "Нет сохраненных пресетов";
+        document.getElementById('dropdownLocalPresets').setAttribute('data-value', '');
+        return;
+    }
+
+    keys.forEach(k => {
+        let li = document.createElement('li');
+        li.setAttribute('data-value', k);
+        li.textContent = k;
+        list.appendChild(li);
+    });
+
+    // re-init dropdown logic for dynamic items
+    initCustomDropdown(document.getElementById('dropdownLocalPresets'));
+}
+
+document.getElementById('btnSavePresetLocally').onclick = () => {
+    const name = document.getElementById('inpPresetName').value.trim();
+    if (!name) { showToast("Введите название пресета!"); return; }
+
+    let presets = {};
+    try { presets = JSON.parse(localStorage.getItem('tdsLocalPresets')) || {}; } catch(e) {}
+
+    presets[name] = {
+        mode: document.getElementById('dropdownMode').getAttribute('data-value'),
+        players: document.getElementById('dropdownPlayers').getAttribute('data-value'),
+        waves: parseInt(inpModeWaves.value),
+        rewards: waveRewardsData.slice(0, parseInt(inpModeWaves.value))
+    };
+
+    localStorage.setItem('tdsLocalPresets', JSON.stringify(presets));
+    showToast(`Пресет "${name}" сохранен локально`);
+    document.getElementById('inpPresetName').value = '';
+    loadLocalPresetsList();
+};
+
+document.getElementById('btnLoadLocalPreset').onclick = () => {
+    const name = document.getElementById('dropdownLocalPresets').getAttribute('data-value');
+    if (!name) { showToast("Выберите пресет для загрузки!"); return; }
+
+    let presets = {};
+    try { presets = JSON.parse(localStorage.getItem('tdsLocalPresets')) || {}; } catch(e) {}
+
+    if (presets[name]) {
+        applyPresetToUI(presets[name]);
+        showToast(`Пресет "${name}" загружен`);
+    } else {
+        showToast("Ошибка загрузки пресета");
+    }
+};
+
+document.getElementById('btnDeleteLocalPreset').onclick = () => {
+    const name = document.getElementById('dropdownLocalPresets').getAttribute('data-value');
+    if (!name) { showToast("Выберите пресет для удаления!"); return; }
+
+    let presets = {};
+    try { presets = JSON.parse(localStorage.getItem('tdsLocalPresets')) || {}; } catch(e) {}
+
+    if (presets[name]) {
+        delete presets[name];
+        localStorage.setItem('tdsLocalPresets', JSON.stringify(presets));
+        document.getElementById('dropdownLocalPresets').querySelector('.selected-text').textContent = "Выберите локальный пресет...";
+        document.getElementById('dropdownLocalPresets').setAttribute('data-value', '');
+        showToast(`Пресет "${name}" удален`);
+        loadLocalPresetsList();
+    }
+};
+
+loadLocalPresetsList();
+
+
+// --- Farm Deck Logic ---
+let activeFarms = [];
+
+function renderFarms() {
+    const list = document.getElementById('farmDeckList');
+    list.innerHTML = '';
+
+    activeFarms.sort((a,b) => b - a); // high level first for display
+
+    activeFarms.forEach((lvl, idx) => {
+        let el = document.createElement('div');
+        el.className = 'farm-badge';
+        el.innerHTML = `
+            <button class="farm-remove" onclick="removeFarm(${idx})">×</button>
+            <div class="farm-lvl">L${lvl}</div>
+            <div class="farm-inc">+$${FARM_STATS[lvl].inc}</div>
+        `;
+        list.appendChild(el);
+    });
+
+    document.getElementById('lblDeckCount').textContent = `${activeFarms.length}/10 Ферм`;
+
+    let totalInc = activeFarms.reduce((sum, lvl) => sum + FARM_STATS[lvl].inc, 0);
+    document.getElementById('lblDeckIncome').textContent = `+$${totalInc} / волна`;
+}
+
+window.removeFarm = (idx) => {
+    activeFarms.splice(idx, 1);
+    renderFarms();
+};
+
+document.getElementById('btnAddFarm0').onclick = () => {
+    if(activeFarms.length < 10) { activeFarms.push(0); renderFarms(); }
+};
+document.getElementById('btnPreset5x2').onclick = () => {
+    activeFarms = [2,2,2,2,2]; renderFarms();
+};
+document.getElementById('btnPreset10x3').onclick = () => {
+    activeFarms = [3,3,3,3,3,3,3,3,3,3]; renderFarms();
+};
+document.getElementById('btnClearDeck').onclick = () => {
+    activeFarms = []; renderFarms();
+};
+
+// --- Simulation Logic ---
 // Rolling Numbers Animation
 function animateValue(obj, start, end, duration) {
   let startTimestamp = null;
@@ -46,169 +341,96 @@ function animateValue(obj, start, end, duration) {
   window.requestAnimationFrame(step);
 }
 
-function renderFarms() {
-  farmsContainer.innerHTML = '';
-  farmCountSpan.textContent = farms.length;
+document.getElementById('btnRunSim').onclick = () => {
+    const startWave = parseInt(document.getElementById('inpCurrentWave').value);
+    const targetWave = parseInt(document.getElementById('inpTargetWave').value);
+    const startCash = parseInt(document.getElementById('inpStartCash').value);
+    const targetCash = parseInt(document.getElementById('inpTargetCash').value);
 
-  if (farms.length >= 10) {
-    addFarmBtn.disabled = true;
-    addFarmBtn.style.opacity = '0.5';
-  } else {
-    addFarmBtn.disabled = false;
-    addFarmBtn.style.opacity = '1';
-  }
+    const isRewardsActive = document.getElementById('toggleWaveRewards').getAttribute('data-active') === 'true';
 
-  farms.forEach((lvl, idx) => {
-    const card = document.createElement('div');
-    card.className = 'farm-card';
-    card.innerHTML = `
-      <button class="farm-remove" data-idx="${idx}">×</button>
-      <div class="farm-lvl">Lvl ${lvl}</div>
-      <div class="farm-inc">+$${FARM_STATS[lvl].inc}/wave</div>
-    `;
-    farmsContainer.appendChild(card);
-  });
+    closeAllDrawers(); // close if open
 
-  // Attach remove listeners
-  document.querySelectorAll('.farm-remove').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const idx = parseInt(e.target.dataset.idx);
-      farms.splice(idx, 1);
-      renderFarms();
+    const result = runSimulation(
+        startWave, targetWave, startCash, targetCash,
+        [...activeFarms], isRewardsActive, waveRewardsData
+    );
+
+    animateValue(document.getElementById('valPureCash'), 0, result.pureCash, 1000);
+    animateValue(document.getElementById('valTotalIncome'), 0, result.totalIncomeGenerated, 1000);
+
+    // Update Details Button Logic
+    const btnDetailed = document.getElementById('btnToggleDetailed');
+    btnDetailed.onclick = () => {
+        stratList.classList.toggle('hidden');
+    };
+
+    const banner = document.getElementById('verdictBanner');
+    const title = document.getElementById('verdictTitle');
+    const sub = document.getElementById('verdictSub');
+
+    if (result.pureCash >= targetCash) {
+        banner.className = 'verdict-banner realizable';
+        title.textContent = 'ВЫПОЛНИМО';
+        sub.textContent = 'Накоплено чистыми деньгами';
+    } else if (result.cashWithSells >= targetCash) {
+        banner.className = 'verdict-banner realizable';
+        title.textContent = 'ВЫПОЛНИМО (С ПРОДАЖЕЙ)';
+        sub.textContent = `Нужно продать ферм на $${result.accumulatedSell.toLocaleString()}`;
+    } else {
+        banner.className = 'verdict-banner unrealizable';
+        title.textContent = 'НЕ ХВАТАЕТ ДЕНЕГ';
+        sub.textContent = `Недостает $${(targetCash - result.maxWealth).toLocaleString()} (даже с продажей)`;
+    }
+
+    const stratList = document.getElementById('strategyList');
+    const aggregated = compactAggregateHistory(result.history);
+    stratList.innerHTML = '';
+
+    if (aggregated.length === 0) {
+        stratList.innerHTML = '<div class="strat-row">Действий не требуется.</div>';
+        return;
+    }
+
+    aggregated.forEach(item => {
+        let el = document.createElement('div');
+        el.className = `strat-row ${item.isWait ? 'wait' : ''}`;
+        el.innerHTML = `
+            <div class="strat-wave">W ${item.waveText}</div>
+            <div class="strat-action">${item.actionText}</div>
+            <div class="strat-cash">$${item.endCash.toLocaleString()}</div>
+        `;
+        stratList.appendChild(el);
     });
-  });
-}
-
-addFarmBtn.addEventListener('click', () => {
-  if (farms.length < 10) {
-    farms.push(0);
-    renderFarms();
-  }
-});
-
-clearFarmsBtn.addEventListener('click', () => {
-  farms = [];
-  renderFarms();
-});
-
-runBtn.addEventListener('click', () => {
-  const startWave = parseInt(startWaveIn.value);
-  const targetWave = parseInt(targetWaveIn.value);
-  const startCash = parseInt(startCashIn.value);
-  const targetCash = parseInt(targetCashIn.value);
-  const isRewards = waveRewardsActive.checked;
-  // Stub for wave rewards data, could be expanded based on mode
-  const dummyRewardsData = Array(100).fill(100);
-
-  const result = runSimulation(
-    startWave, targetWave, startCash, targetCash,
-    farms, isRewards, dummyRewardsData
-  );
-
-  // Animate Results
-  animateValue(resTotalIncome, 0, result.totalIncomeGenerated, 1000);
-  animateValue(resPureCash, 0, result.pureCash, 1000);
-  animateValue(resMaxWealth, 0, result.maxWealth, 1000);
-
-  // Render Action Plan
-  const aggregated = compactAggregateHistory(result.history);
-  actionPlanContainer.innerHTML = '';
-
-  if (aggregated.length === 0) {
-    actionPlanContainer.innerHTML = '<div class="action-row">No actions needed.</div>';
-    return;
-  }
-
-  aggregated.forEach(item => {
-    const row = document.createElement('div');
-    row.className = `action-row ${item.isWait ? 'wait' : ''}`;
-    row.innerHTML = `
-      <div class="wave-num">W ${item.waveText}</div>
-      <div class="action-desc">${item.actionText}</div>
-      <div class="action-cash">$${item.endCash.toLocaleString()}</div>
-    `;
-    actionPlanContainer.appendChild(row);
-  });
-});
-
-// Load preset data into UI
-export function loadPreset(preset) {
-  if (preset.mode) modeSelect.value = preset.mode;
-  if (preset.players) playersSelect.value = preset.players;
-  if (preset.startWave !== undefined) startWaveIn.value = preset.startWave;
-  if (preset.targetWave !== undefined) targetWaveIn.value = preset.targetWave;
-  if (preset.startCash !== undefined) startCashIn.value = preset.startCash;
-  if (preset.targetCash !== undefined) targetCashIn.value = preset.targetCash;
-  if (preset.initialFarms) farms = [...preset.initialFarms];
-  if (preset.isWaveRewardsActive !== undefined) waveRewardsActive.checked = preset.isWaveRewardsActive;
-  // No skill tree is permanently locked, but we acknowledge it
-
-  renderFarms();
-
-  // Flash UI to indicate load
-  document.body.style.transition = 'background-color 0.3s';
-  document.body.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
-  setTimeout(() => {
-    document.body.style.backgroundColor = '';
-  }, 300);
-}
-
-// --- Authentication ---
-const loginBtn = document.getElementById('login-btn');
-const loginModal = document.getElementById('login-modal');
-const closeLoginBtn = document.querySelector('.close-login-btn');
-const fastLoginBtn = document.getElementById('fast-login-btn');
-const loginStatus = document.getElementById('login-status');
-let BOT_USERNAME = null;
-fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/bot_info`)
-  .then(r => r.json())
-  .then(data => BOT_USERNAME = data.username)
-  .catch(console.error);
-
-loginBtn.onclick = () => loginModal.style.display = 'block';
-closeLoginBtn.onclick = () => loginModal.style.display = 'none';
-
-fastLoginBtn.onclick = () => {
-  if (!BOT_USERNAME) {
-      showToast('Bot username not loaded yet');
-      return;
-  }
-  loginStatus.style.display = 'block';
-  // Opens Telegram deeplink
-  window.open(`https://t.me/${BOT_USERNAME}?start=${sessionId}`, '_blank');
 };
 
-// --- Community Modal & API ---
-const communityBtn = document.getElementById('community-btn');
-const communityModal = document.getElementById('community-modal');
-const closeBtn = document.querySelector('.close-btn');
-
-const tabBrowse = document.getElementById('tab-browse');
-const tabPublish = document.getElementById('tab-publish');
-const browseSection = document.getElementById('browse-section');
-const publishSection = document.getElementById('publish-section');
-
-const tabFavorites = document.getElementById('tab-favorites');
-const tabMyPresets = document.getElementById('tab-my-presets');
-const tabProfile = document.getElementById('tab-profile');
-const favoritesSection = document.getElementById('favorites-section');
-const myPresetsSection = document.getElementById('my-presets-section');
-const profileSection = document.getElementById('profile-section');
-const favoritesList = document.getElementById('favorites-list');
-const myPresetsList = document.getElementById('my-presets-list');
-const profileStats = document.getElementById('profile-stats');
-
-let currentUserId = null; // Will be set on auth_success
-
-const filterMode = document.getElementById('filter-mode');
-const presetsList = document.getElementById('presets-list');
-
-const publishSubmitBtn = document.getElementById('publish-submit-btn');
-const presetTitleIn = document.getElementById('preset-title');
-const authorNameIn = document.getElementById('author-name');
-const publishStatus = document.getElementById('publish-status');
-
+// --- Library & API Logic ---
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+let currentUserId = null;
+
+// Library Tabs
+const libTabs = document.querySelectorAll('#libraryDrawer .tab-btn');
+const libPanes = document.querySelectorAll('#libraryDrawer .tab-pane');
+
+libTabs.forEach(btn => {
+    btn.onclick = () => {
+        libTabs.forEach(b => b.classList.remove('active'));
+        libPanes.forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        const targetId = btn.getAttribute('data-target');
+        document.getElementById(targetId).classList.add('active');
+
+        if (targetId === 'lib-catalog') fetchCommunityPresets();
+        if (targetId === 'lib-profile') fetchProfileData();
+    };
+});
+
+function showToast(msg) {
+    let toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3000);
+}
 
 const MODE_ICONS = {
   "Easy": "https://static.wikia.nocookie.net/tower-defense-sim/images/8/87/EasyReworkIcon.png",
@@ -224,360 +446,201 @@ const MODE_ICONS = {
   "Polluted Wasteland II": "https://static.wikia.nocookie.net/tower-defense-sim/images/b/bd/PollutedWastelandIIIconNew.png"
 };
 
-// Modal toggles
-communityBtn.onclick = () => {
-  communityModal.style.display = 'block';
-  fetchPresets();
-};
-closeBtn.onclick = () => communityModal.style.display = 'none';
-window.onclick = (event) => {
-  if (event.target === communityModal) {
-    communityModal.style.display = 'none';
-  }
-};
+async function fetchCommunityPresets() {
+    const container = document.getElementById('community-presets-list');
+    const mode = document.getElementById('dropdownCatalogFilter').getAttribute('data-value');
 
+    container.innerHTML = '<div class="preset-card skeleton" style="height: 80px;"></div>';
 
-tabBrowse.onclick = () => switchTab('browse');
-tabPublish.onclick = () => switchTab('publish');
-tabFavorites.onclick = () => switchTab('favorites');
-tabMyPresets.onclick = () => switchTab('my-presets');
-tabProfile.onclick = () => switchTab('profile');
+    try {
+        const res = await fetch(`${API_URL}/api/presets?mode=${mode}`);
+        if (!res.ok) throw new Error('API Error');
+        const presets = await res.json();
 
-function switchTab(tab) {
-  const tabs = {
-    'browse': { btn: tabBrowse, sec: browseSection },
-    'publish': { btn: tabPublish, sec: publishSection },
-    'favorites': { btn: tabFavorites, sec: favoritesSection },
-    'my-presets': { btn: tabMyPresets, sec: myPresetsSection },
-    'profile': { btn: tabProfile, sec: profileSection }
-  };
+        container.innerHTML = '';
+        if (presets.length === 0) {
+            container.innerHTML = '<p>Пресеты не найдены.</p>';
+            return;
+        }
 
-  for (let k in tabs) {
-    tabs[k].btn.classList.remove('active');
-    tabs[k].sec.classList.remove('active');
-  }
-
-  tabs[tab].btn.classList.add('active');
-  tabs[tab].sec.classList.add('active');
-
-  // A small delay to allow display:block to apply before changing opacity for transition
-  setTimeout(() => {
-    tabs[tab].sec.classList.add('active');
-  }, 10);
-
-  if (tab === 'publish') {
-    publishStatus.textContent = '';
-  } else if (tab === 'favorites') {
-    fetchFavorites();
-  } else if (tab === 'my-presets') {
-    fetchMyPresets();
-  } else if (tab === 'profile') {
-    fetchProfile();
-  }
-}
-
-filterMode.onchange = fetchPresets;
-
-async function fetchPresets() {
-  presetsList.innerHTML = `
-    <div class="preset-card skeleton" style="height: 80px; margin-bottom: 1rem;"></div>
-    <div class="preset-card skeleton" style="height: 80px; margin-bottom: 1rem;"></div>
-    <div class="preset-card skeleton" style="height: 80px;"></div>
-  `;
-  try {
-    // We update this fetch to just do mode for now, but in the bot we'll do search/players.
-    // Wait, the API could support players/search if needed, but the web UI filter only has Mode.
-    // Let's add basic players support to web UI just in case? Or leave web UI as Mode. The bot needs the rich filtering.
-    const res = await fetch(`${API_URL}/api/presets?mode=${filterMode.value}`);
-    if (!res.ok) throw new Error('Failed to fetch presets');
-    const presets = await res.json();
-
-    presetsList.innerHTML = '';
-    if (presets.length === 0) {
-      presetsList.innerHTML = '<p>No presets found.</p>';
-      return;
+        presets.forEach(p => renderPresetCard(p, container));
+    } catch (e) {
+        container.innerHTML = '<p>Ошибка загрузки.</p>';
     }
-
-    presets.forEach(p => {
-      const iconUrl = MODE_ICONS[p.mode] || MODE_ICONS["Easy"];
-      const card = document.createElement('div');
-      card.className = 'preset-card';
-      card.innerHTML = `
-        <div class="preset-info" style="flex-grow: 1;">
-          <img src="${iconUrl}" alt="${p.mode}" class="preset-icon" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\'/>'"/>
-          <div class="preset-details">
-            <h3 class="safe-title"></h3>
-            <p>${p.mode} | ${p.players}P</p>
-            <div class="social-actions" style="display:flex; gap: 0.5rem; margin-top: 0.25rem;">
-               <button class="secondary-btn" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;" onclick="interactPreset(${p.id}, 'like', event)">👍 ${p.likes || 0}</button>
-               <button class="secondary-btn" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;" onclick="interactPreset(${p.id}, 'dislike', event)">👎</button>
-               <button class="secondary-btn" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;" onclick="interactPreset(${p.id}, 'favorite', event)">⭐ Save</button>
-               <button class="danger-btn" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;" onclick="reportPreset(${p.id}, event)">⚠️ Report</button>
-            </div>
-          </div>
-        </div>
-        <button class="primary-btn" style="width: auto; height: fit-content;" onclick="requestLoadPreset(${p.id})">Load</button>
-      `;
-      card.querySelector('.safe-title').textContent = p.title;
-      presetsList.appendChild(card);
-    });
-  } catch (err) {
-    console.error(err);
-    presetsList.innerHTML = '<p>Error loading presets.</p>';
-  }
 }
 
 function renderPresetCard(p, container) {
-  const iconUrl = MODE_ICONS[p.mode] || MODE_ICONS["Easy"];
-  const card = document.createElement('div');
-  card.className = 'preset-card';
-  card.innerHTML = `
-    <div class="preset-info" style="flex-grow: 1;">
-      <img src="${iconUrl}" alt="${p.mode}" class="preset-icon" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\'/>'"/>
-      <div class="preset-details">
-        <h3 class="safe-title"></h3>
-        <p>${p.mode} | ${p.players}P | Автор: ${p.author || 'Anonymous'}</p>
-        <div class="social-actions" style="display:flex; gap: 0.5rem; margin-top: 0.25rem;">
-           <button class="secondary-btn" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;" onclick="interactPreset(${p.id}, 'like', event)">👍 ${p.likes || 0}</button>
-           <button class="secondary-btn" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;" onclick="interactPreset(${p.id}, 'dislike', event)">👎</button>
-           <button class="secondary-btn" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;" onclick="interactPreset(${p.id}, 'favorite', event)">⭐ Save</button>
-           <button class="danger-btn" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;" onclick="reportPreset(${p.id}, event)">⚠️ Report</button>
+    const iconUrl = MODE_ICONS[p.mode] || MODE_ICONS["Easy"];
+    const card = document.createElement('div');
+    card.className = 'preset-card liquid-btn';
+    card.style.display = 'flex';
+    card.style.cursor = 'default';
+    card.innerHTML = `
+        <img src="${iconUrl}" alt="${p.mode}" class="preset-icon" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\'/>'"/>
+        <div class="preset-info">
+            <h3 class="safe-title"></h3>
+            <p>${p.mode} | ${p.players}P | Автор: ${p.author || 'Anonymous'}</p>
+            <div class="social-actions">
+                <button class="badge-btn liquid-btn" onclick="interactPreset(${p.id}, 'like', event)">👍 ${p.likes || 0}</button>
+                <button class="badge-btn liquid-btn" onclick="interactPreset(${p.id}, 'favorite', event)">⭐</button>
+                <button class="badge-btn liquid-btn danger-btn" onclick="reportPreset(${p.id}, event)">⚠️</button>
+            </div>
         </div>
-      </div>
-    </div>
-    <button class="primary-btn" style="width: auto; height: fit-content;" onclick="requestLoadPreset(${p.id})">Load</button>
-  `;
-  card.querySelector('.safe-title').textContent = p.title;
-  container.appendChild(card);
-}
-
-async function fetchFavorites() {
-  if (!currentUserId) {
-    favoritesList.innerHTML = '<p>Пожалуйста, войдите в систему (Sign In), чтобы увидеть избранное.</p>';
-    return;
-  }
-  favoritesList.innerHTML = '<div class="preset-card skeleton" style="height: 80px;"></div>';
-  try {
-    const res = await fetch(`${API_URL}/api/favorites?user_id=${currentUserId}`);
-    if (!res.ok) throw new Error('Failed to fetch favorites');
-    const presets = await res.json();
-    favoritesList.innerHTML = '';
-    if (presets.length === 0) {
-      favoritesList.innerHTML = '<p>У вас пока нет избранных пресетов.</p>';
-      return;
-    }
-    presets.forEach(p => renderPresetCard(p, favoritesList));
-  } catch (err) {
-    console.error(err);
-    favoritesList.innerHTML = '<p>Ошибка загрузки избранного.</p>';
-  }
-}
-
-async function fetchMyPresets() {
-  if (!currentUserId) {
-    myPresetsList.innerHTML = '<p>Пожалуйста, войдите в систему (Sign In), чтобы увидеть свои пресеты.</p>';
-    return;
-  }
-  myPresetsList.innerHTML = '<div class="preset-card skeleton" style="height: 80px;"></div>';
-  try {
-    const res = await fetch(`${API_URL}/api/my_presets?user_id=${currentUserId}`);
-    if (!res.ok) throw new Error('Failed to fetch my presets');
-    const presets = await res.json();
-    myPresetsList.innerHTML = '';
-    if (presets.length === 0) {
-      myPresetsList.innerHTML = '<p>Вы еще не опубликовали ни одного пресета.</p>';
-      return;
-    }
-    presets.forEach(p => renderPresetCard(p, myPresetsList));
-  } catch (err) {
-    console.error(err);
-    myPresetsList.innerHTML = '<p>Ошибка загрузки ваших пресетов.</p>';
-  }
-}
-
-async function fetchProfile() {
-  if (!currentUserId) {
-    profileStats.innerHTML = '<p>Пожалуйста, войдите в систему (Sign In), чтобы увидеть свой профиль.</p>';
-    return;
-  }
-  profileStats.innerHTML = '<p>Загрузка...</p>';
-  try {
-    const res = await fetch(`${API_URL}/api/profile?user_id=${currentUserId}`);
-    if (!res.ok) throw new Error('Failed to fetch profile');
-    const data = await res.json();
-    profileStats.innerHTML = `
-      <div class="stat-card">
-        <div class="stat-label">Имя пользователя</div>
-        <div class="stat-value accent-text">@${data.username || 'Unknown'}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Опубликовано пресетов</div>
-        <div class="stat-value accent-text">${data.created || 0}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Одобрено модерацией</div>
-        <div class="stat-value accent-text">${data.approved || 0}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Всего лайков</div>
-        <div class="stat-value accent-text">${data.total_likes || 0}</div>
-      </div>
+        <button class="btn btn-primary liquid-btn" onclick="loadPresetData(${p.id})" style="padding:8px;">Загрузить</button>
     `;
-  } catch (err) {
-    console.error(err);
-    profileStats.innerHTML = '<p>Ошибка загрузки профиля.</p>';
-  }
+    card.querySelector('.safe-title').textContent = p.title;
+    container.appendChild(card);
 }
 
-window.interactPreset = async (presetId, action, event) => {
-  event.stopPropagation();
-  try {
-    const res = await fetch(`${API_URL}/api/interact`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ preset_id: presetId, action: action, user_id: currentUserId || 0 })
-    });
-    if (res.ok) {
-      // Show toast
-      showToast(action === 'like' ? 'Лайк поставлен!' : 'Пресет сохранен!');
-      if (action === 'like') fetchPresets(); // refresh likes
-    }
-  } catch(e) {
-    console.error(e);
-  }
+window.interactPreset = async (id, action, e) => {
+    e.stopPropagation();
+    try {
+        const res = await fetch(`${API_URL}/api/interact`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ preset_id: id, action: action, user_id: currentUserId || 0 })
+        });
+        if (res.ok) {
+            showToast(action === 'like' ? 'Лайк поставлен!' : 'Сохранено!');
+            if (action === 'like') fetchCommunityPresets();
+        }
+    } catch(err) { console.error(err); }
 };
 
-window.reportPreset = async (presetId, event) => {
-  event.stopPropagation();
-  const reason = prompt("Причина жалобы (например, Нереализуемый билд, Спам):");
-  if (!reason) return;
-
-  try {
-    const res = await fetch(`${API_URL}/api/report`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ preset_id: presetId, reason })
-    });
-    if (res.ok) {
-      showToast('Жалоба отправлена модераторам');
-    }
-  } catch(e) {
-    console.error(e);
-  }
+window.reportPreset = async (id, e) => {
+    e.stopPropagation();
+    const reason = prompt("Причина жалобы:");
+    if (!reason) return;
+    try {
+        const res = await fetch(`${API_URL}/api/report`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ preset_id: id, reason })
+        });
+        if (res.ok) showToast('Жалоба отправлена');
+    } catch(err) { console.error(err); }
 };
 
-// Toast Notification
-function showToast(msg) {
-  let toast = document.getElementById('toast');
-  if (!toast) {
-    toast = document.createElement('div');
-    toast.id = 'toast';
-    toast.style.cssText = 'position:fixed; bottom:20px; right:20px; background:rgba(0,0,0,0.8); color:#fff; padding:10px 20px; border-radius:8px; z-index:9999; border:1px solid var(--border-color); backdrop-filter: blur(10px); transition: opacity 0.3s; opacity:0;';
-    document.body.appendChild(toast);
-  }
-  toast.textContent = msg;
-  toast.style.opacity = '1';
-  setTimeout(() => { toast.style.opacity = '0'; }, 3000);
+// WebSocket & Auth logic ported over
+let sessionId = sessionStorage.getItem('sessionId');
+if (!sessionId) {
+  sessionId = Math.floor(100000 + Math.random() * 900000).toString();
+  sessionStorage.setItem('sessionId', sessionId);
 }
 
-// In a real app we'd load by ID from backend, but since the bot handles it or we can just fetch it here.
-// Let's pretend the bot does the push when we tell the backend to load it to our session.
-window.requestLoadPreset = async (presetId) => {
-  alert(`To load this preset, go to the Telegram bot and click Load or type the session ID ${sessionId}`);
-  // If we wanted to load it directly, we'd add an endpoint for it.
+let BOT_USERNAME = null;
+fetch(`${API_URL}/api/bot_info`).then(r => r.json()).then(d => BOT_USERNAME = d.username).catch(console.error);
+
+document.getElementById('btnFastLogin').onclick = () => {
+    if (!BOT_USERNAME) { showToast("Бот загружается..."); return; }
+    document.getElementById('loginStatusText').textContent = "Ожидание авторизации в боте...";
+    window.open(`https://t.me/${BOT_USERNAME}?start=${sessionId}`, '_blank');
 };
 
-publishSubmitBtn.onclick = async () => {
-  const title = presetTitleIn.value.trim();
-  if (!title) {
-    publishStatus.textContent = 'Title is required!';
-    publishStatus.style.color = 'var(--danger-color)';
-    return;
-  }
-
-  publishSubmitBtn.disabled = true;
-  publishStatus.textContent = 'Submitting...';
-  publishStatus.style.color = 'var(--text-primary)';
-
-  const presetData = {
-    mode: modeSelect.value,
-    players: playersSelect.value,
-    startWave: parseInt(startWaveIn.value),
-    targetWave: parseInt(targetWaveIn.value),
-    startCash: parseInt(startCashIn.value),
-    targetCash: parseInt(targetCashIn.value),
-    initialFarms: [...farms],
-    isWaveRewardsActive: waveRewardsActive.checked,
-    noSkillTree: true
-  };
-
-  try {
-    const res = await fetch(`${API_URL}/api/publish`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title,
-        mode: modeSelect.value,
-        players: playersSelect.value,
-        username: authorNameIn.value.trim() || 'Anonymous',
-        presetData,
-        user_id: currentUserId
-      })
-    });
-
-    if (!res.ok) throw new Error('Submission failed');
-
-    publishStatus.textContent = 'Success! Preset submitted for moderation.';
-    publishStatus.style.color = 'var(--accent-color)';
-    presetTitleIn.value = '';
-  } catch (err) {
-    console.error(err);
-    publishStatus.textContent = 'Error submitting preset.';
-    publishStatus.style.color = 'var(--danger-color)';
-  } finally {
-    publishSubmitBtn.disabled = false;
-  }
-};
-
-
-// Initial render
-renderFarms();
-
-// --- WebSocket Connection ---
 function connectWebSocket() {
   const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws';
   const ws = new WebSocket(wsUrl);
-
-  ws.onopen = () => {
-    console.log('Connected to WS');
-    // Register session
-    ws.send(JSON.stringify({ type: 'register', sessionId: sessionId }));
-  };
-
+  ws.onopen = () => ws.send(JSON.stringify({ type: 'register', sessionId: sessionId }));
   ws.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
       if (data.type === 'load_preset' && data.preset) {
-        loadPreset(data.preset);
+        applyPresetToUI(data.preset);
+        showToast("Пресет загружен!");
       } else if (data.type === 'auth_success') {
-        loginModal.style.display = 'none';
-        loginBtn.textContent = 'Profile';
-        showToast('Успешный вход!');
         currentUserId = data.user_id;
-        // Fetch new lists if tabs are open
-        if (favoritesSection.classList.contains('active')) fetchFavorites();
-        if (myPresetsSection.classList.contains('active')) fetchMyPresets();
-        if (profileSection.classList.contains('active')) fetchProfile();
+        document.getElementById('authSection').style.display = 'none';
+        document.getElementById('profileSection').style.display = 'block';
+        fetchProfileData();
+        showToast('Успешный вход!');
       }
-    } catch (e) {
-      console.error('Error parsing WS message', e);
-    }
+    } catch (e) {}
   };
+  ws.onclose = () => setTimeout(connectWebSocket, 3000);
+}
+connectWebSocket();
 
-  ws.onclose = () => {
-    console.log('WS disconnected. Reconnecting in 3s...');
-    setTimeout(connectWebSocket, 3000);
-  };
+async function fetchProfileData() {
+    if(!currentUserId) return;
+    try {
+        const resProfile = await fetch(`${API_URL}/api/profile?user_id=${currentUserId}`);
+        const data = await resProfile.json();
+
+        document.getElementById('profileStatsContainer').innerHTML = `
+            <div class="metric"><span class="lbl">Пресеты</span><span class="val">${data.created||0}</span></div>
+            <div class="metric"><span class="lbl">Лайки</span><span class="val emerald">${data.total_likes||0}</span></div>
+        `;
+
+        const resFav = await fetch(`${API_URL}/api/favorites?user_id=${currentUserId}`);
+        const favs = await resFav.json();
+        const favList = document.getElementById('favorites-list');
+        favList.innerHTML = '';
+        favs.forEach(p => renderPresetCard(p, favList));
+
+        const resMy = await fetch(`${API_URL}/api/my_presets?user_id=${currentUserId}`);
+        const my = await resMy.json();
+        const myList = document.getElementById('my-presets-list');
+        myList.innerHTML = '';
+        my.forEach(p => renderPresetCard(p, myList));
+
+    } catch(e) {}
 }
 
-connectWebSocket();
+window.loadPresetData = async (id) => {
+    showToast(`Для загрузки пресета ${id} перейдите в бота`);
+};
+
+document.getElementById('btnPublishPreset').onclick = async () => {
+    const title = document.getElementById('inpPublishTitle').value.trim();
+    if(!title) { showToast("Введите название!"); return; }
+
+    document.getElementById('btnPublishPreset').disabled = true;
+
+    const presetData = {
+        mode: document.getElementById('dropdownMode').getAttribute('data-value'),
+        players: document.getElementById('dropdownPlayers').getAttribute('data-value'),
+        waves: parseInt(inpModeWaves.value),
+        rewards: waveRewardsData.slice(0, parseInt(inpModeWaves.value))
+    };
+
+    try {
+        const res = await fetch(`${API_URL}/api/publish`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                title: title,
+                mode: presetData.mode,
+                players: presetData.players,
+                presetData: presetData,
+                user_id: currentUserId || 0
+            })
+        });
+        if (res.ok) {
+            showToast("Пресет отправлен на модерацию!");
+            document.getElementById('inpPublishTitle').value = '';
+        }
+    } catch (e) {
+        showToast("Ошибка публикации");
+    } finally {
+        document.getElementById('btnPublishPreset').disabled = false;
+    }
+};
+
+function applyPresetToUI(preset) {
+    if(preset.mode) document.getElementById('dropdownMode').setAttribute('data-value', preset.mode);
+    if(preset.mode) document.getElementById('dropdownMode').querySelector('.selected-text').textContent = preset.mode;
+    if(preset.players) document.getElementById('dropdownPlayers').setAttribute('data-value', preset.players);
+
+    if(preset.waves) {
+        inpModeWaves.value = preset.waves;
+        renderWaveGrid();
+    }
+    if(preset.rewards) {
+        for(let i=0; i<preset.rewards.length; i++) waveRewardsData[i] = preset.rewards[i];
+        renderWaveGrid();
+    }
+}
+
+// Initial renders
+renderFarms();
+fetchCommunityPresets();
