@@ -476,7 +476,7 @@ document.getElementById('btnRunSim').onclick = () => {
 };
 
 // --- Library & API Logic ---
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const API_URL = import.meta.env.VITE_API_URL || 'https://tds-utils.onrender.com';
 let currentUserId = null;
 
 // Library Tabs
@@ -521,7 +521,17 @@ async function fetchCommunityPresets() {
     const container = document.getElementById('community-presets-list');
     const mode = document.getElementById('dropdownCatalogFilter').getAttribute('data-value');
 
-    container.innerHTML = '<div class="preset-card skeleton" style="height: 80px;"></div>';
+    container.innerHTML = `
+        <div class="quantum-loader-container">
+            <div class="quantum-core">
+                <div class="ring ring-1"></div>
+                <div class="ring ring-2"></div>
+                <div class="ring ring-3"></div>
+                <div class="core-center"></div>
+            </div>
+            <div class="loading-text">ИНИЦИАЛИЗАЦИЯ...</div>
+        </div>
+    `;
 
     try {
         const res = await fetch(`${API_URL}/api/presets?mode=${mode}`);
@@ -631,7 +641,7 @@ fetch(`${API_URL}/api/bot_info`).then(r => r.json()).then(d => BOT_USERNAME = d.
 /* removed fastlogin logic */
 
 function connectWebSocket() {
-  const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws';
+  const wsUrl = import.meta.env.VITE_WS_URL || 'wss://tds-utils.onrender.com/ws';
   const ws = new WebSocket(wsUrl);
   ws.onopen = () => ws.send(JSON.stringify({ type: 'register', sessionId: sessionId }));
   ws.onmessage = (event) => {
