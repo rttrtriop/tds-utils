@@ -380,21 +380,44 @@ async def publish_preset_api(request):
         await update_user_stats(author_id, author_username, created=1)
 
         async with aiosqlite.connect(DB_FILE) as db:
-            cursor = await db.execute("INSERT INTO presets (user_id, title, mode, players, data) VALUES (?, ?, ?, ?, ?)",
-                           (author_id, title, mode, players, json.dumps(preset_data)))
+            # Check if preset exists for this mode
+            async with db.execute("SELECT id FROM presets WHERE mode = ? AND status = 'approved'", (mode,)) as cursor:
+                existing = await cursor.fetchone()
+
+            if existing and not is_appeal:
+                return web.json_response({"success": False, "error": "mode_occupied"})
+
+            cursor = await db.execute("INSERT INTO presets (user_id, title, mode, players, data, status) VALUES (?, ?, ?, ?, ?, ?)",
+                           (author_id, title, mode, players, json.dumps(preset_data), 'pending' if not is_appeal else 'appeal'))
             pid = cursor.lastrowid
             await db.commit()
 
-        # Send to admin for moderation
-        builder = InlineKeyboardBuilder()
-        builder.button(text="✅ Одобрить", callback_data=f"mod_approve_{pid}_{author_id}")
-        builder.button(text="❌ Отклонить", callback_data=f"mod_reject_{pid}_{author_id}")
+        # Notify admin
+        kb = InlineKeyboardBuilder()
+        if is_appeal:
+            kb.button(text="✅ Одобрить замену", callback_data=f"replace_{pid}_{mode}")
+            kb.button(text="❌ Отклонить", callback_data=f"reject_{pid}")
+            msg = f"⚠️ **Апелляция на замену пресета!**
 
-        await bot.send_message(ADMIN_ID, f"New preset submitted from WEB by {author_username}:\nTitle: {title}\nMode: {mode}\nPlayers: {players}", reply_markup=builder.as_markup())
+Название: {title}
+Режим: {mode} ({players})
+Автор: {author_username}
+Причина: {appeal_reason}"
+        else:
+            kb.button(text="✅ Одобрить", callback_data=f"approve_{pid}")
+            kb.button(text="❌ Отклонить", callback_data=f"reject_{pid}")
+            msg = f"**Новый пресет на модерацию!**
 
-        return web.json_response({"success": True, "message": "Preset submitted for moderation"})
+Название: {title}
+Автор: {author_username} ({author_id})
+Режим: {mode} ({players})
+
+Данные: `{json.dumps(preset_data)[:100]}...`"
+
+        await bot.send_message(ADMIN_ID, msg, reply_markup=kb.as_markup(), parse_mode="Markdown")
+
+        return web.json_response({"success": True, "preset_id": pid})
     except Exception as e:
-        logging.error(f"Error publishing: {e}")
         return web.json_response({"success": False, "error": str(e)}, status=500)
 
 async def apply_preset_tma_api(request):
