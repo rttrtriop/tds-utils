@@ -790,7 +790,7 @@ document.getElementById('btnPublishPreset').onclick = async () => {
             document.getElementById('inpPublishTitle').value = '';
         }
     } catch (e) {
-        showToast("Ошибка публикации");
+        showToast("Сохранено локально / Нет связи с сервером");
     } finally {
         document.getElementById('btnPublishPreset').disabled = false;
     }
