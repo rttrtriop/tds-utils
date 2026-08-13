@@ -3,6 +3,7 @@ import json
 import logging
 import aiosqlite
 import os
+import uuid
 from typing import Dict, Any
 
 from aiohttp import web
@@ -69,9 +70,7 @@ async def init_db():
         await db.commit()
 
 # --- Shared State ---
-# Websockets: sessionId -> WebSocketResponse
 active_websockets: Dict[str, web.WebSocketResponse] = {}
-# Bot state: user_id -> dict with session context
 user_sessions: Dict[int, Dict[str, Any]] = {}
 
 # --- Telegram Bot ---
@@ -95,7 +94,9 @@ async def update_user_stats(user_id: int, username: str, created: int = 0, appro
 @dp.message(Command("start"))
 async def start_handler(message: types.Message):
     args = message.text.split(maxsplit=1)
-    await upsert_user(message.from_user.id, message.from_user.username)
+    # ИСПРАВЛЕНО: Заменили upsert_user на update_user_stats
+    await update_user_stats(message.from_user.id, message.from_user.username or 'Anonymous')
+    
     if len(args) > 1:
         auth_key = args[1]
         user_id = message.from_user.id
@@ -111,7 +112,7 @@ async def start_handler(message: types.Message):
                 user_sessions[user_id]['session_id'] = session_id
 
                 # Update user in DB
-                await db.execute("UPDATE users SET username = ? WHERE user_id = ?", (message.from_user.username, user_id))
+                await db.execute("UPDATE users SET username = ? WHERE user_id = ?", (message.from_user.username or 'Anonymous', user_id))
                 await db.commit()
 
                 # Notify web client of auth success
@@ -120,15 +121,15 @@ async def start_handler(message: types.Message):
                         await active_websockets[session_id].send_json({
                             "type": "auth_success",
                             "user_id": user_id,
-                            "username": message.from_user.username,
-                            "photo_url": "" # Handled client side fallback
+                            "username": message.from_user.username or 'Anonymous',
+                            "photo_url": ""
                         })
-                    except:
-                        pass
+                    except Exception as e:
+                        logging.error(f"Error sending ws auth success: {e}")
 
                 await db.execute("DELETE FROM auth_sessions WHERE auth_key = ?", (auth_key,))
                 await db.commit()
-                await message.answer(f"✅ Аккаунт успешно привязан к TDS Strategist!")
+                await message.answer("✅ Аккаунт успешно привязан к TDS Strategist!")
             else:
                 await message.answer("❌ Недействительный или устаревший ключ авторизации.")
     else:
@@ -170,13 +171,11 @@ async def top_handler(message: types.Message):
 async def catalog_handler(message: types.Message):
     builder = InlineKeyboardBuilder()
 
-    # Modes
     modes = ["Easy", "Molten", "Fallen", "Hardcore", "Pizza Party", "Badlands II", "Polluted Wasteland II"]
     for mode in modes:
         builder.button(text=mode, callback_data=f"filter_mode_{mode}")
     builder.adjust(3)
 
-    # Players
     players = ["1", "2", "3", "4"]
     for p in players:
         builder.button(text=f"{p}P", callback_data=f"filter_p_{p}")
@@ -216,7 +215,6 @@ async def filter_callback(callback: types.CallbackQuery):
 
     for pid, title, mode, players in presets:
         text += f"🔹 **{title}** ({mode} | {players}P)\n"
-        # primary button style mapping - aiogram uses text for styling usually, or just emojis
         builder.button(text=f"🎮 Загрузить в калькулятор: {title}", callback_data=f"load_{pid}")
 
     builder.adjust(1)
@@ -225,7 +223,6 @@ async def filter_callback(callback: types.CallbackQuery):
 
 @dp.message(F.text & ~F.text.startswith("/"))
 async def search_presets(message: types.Message):
-    # If it's a 6 digit code, it's a session ID registration
     if message.text.isdigit() and len(message.text) == 6:
         user_id = message.from_user.id
         if user_id not in user_sessions:
@@ -234,7 +231,6 @@ async def search_presets(message: types.Message):
         await message.answer(f"✅ Web Session ID `{message.text}` connected!", parse_mode="Markdown")
         return
 
-    # Otherwise, Search by name
     search_term = f"%{message.text}%"
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute("SELECT id, title, mode, players FROM presets WHERE status = 'approved' AND title LIKE ? LIMIT 5", (search_term,)) as cursor:
@@ -288,7 +284,6 @@ async def load_preset_callback(callback: types.CallbackQuery):
 
     await callback.answer()
 
-# Moderation features
 @dp.callback_query(F.data.startswith("approve_") | F.data.startswith("reject_") | F.data.startswith("replace_"))
 async def mod_callback(callback: types.CallbackQuery):
     if callback.from_user.id != ADMIN_ID:
@@ -300,7 +295,6 @@ async def mod_callback(callback: types.CallbackQuery):
     pid = int(parts[1])
 
     async with aiosqlite.connect(DB_FILE) as db:
-        # Get author_id to notify
         async with db.execute("SELECT user_id FROM presets WHERE id = ?", (pid,)) as cursor:
             row = await cursor.fetchone()
             author_id = row[0] if row else None
@@ -314,9 +308,7 @@ async def mod_callback(callback: types.CallbackQuery):
             except: pass
         elif action == "replace":
             mode = parts[2]
-            # Delete old active preset for this mode
             await db.execute("DELETE FROM presets WHERE mode = ? AND status = 'approved'", (mode,))
-            # Approve new preset
             await db.execute("UPDATE presets SET status = 'approved' WHERE id = ?", (pid,))
             if author_id: await update_user_stats(author_id, "", approved=1)
             await callback.message.edit_text(callback.message.text + "\n\n✅ **ЗАМЕНА ОДОБРЕНА**", parse_mode="Markdown")
@@ -335,7 +327,6 @@ async def mod_callback(callback: types.CallbackQuery):
 
 # --- API Endpoints ---
 
-import uuid
 async def generate_auth_key_api(request):
     try:
         data = await request.json()
@@ -375,12 +366,12 @@ async def publish_preset_api(request):
 
         author_id = data.get('user_id')
         if not author_id:
-            author_id = hash(author_username) % 1000000000
+            # ИСПРАВЛЕНО: abs() предотвратит отрицательные айдишники
+            author_id = abs(hash(author_username)) % 1000000000
 
         await update_user_stats(author_id, author_username, created=1)
 
         async with aiosqlite.connect(DB_FILE) as db:
-            # Check if preset exists for this mode
             async with db.execute("SELECT id FROM presets WHERE mode = ? AND status = 'approved'", (mode,)) as cursor:
                 existing = await cursor.fetchone()
 
@@ -392,7 +383,6 @@ async def publish_preset_api(request):
             pid = cursor.lastrowid
             await db.commit()
 
-        # Notify admin
         kb = InlineKeyboardBuilder()
         if is_appeal:
             kb.button(text="✅ Одобрить замену", callback_data=f"replace_{pid}_{mode}")
@@ -457,14 +447,12 @@ async def interact_preset_api(request):
     try:
         data = await request.json()
         preset_id = data.get('preset_id')
-        action = data.get('action') # 'like', 'dislike', 'favorite'
-        # Anonymous for now if from web without auth, but let's accept user_id if passed
+        action = data.get('action')
         user_id = data.get('user_id', 0)
 
         async with aiosqlite.connect(DB_FILE) as db:
             if action in ['like', 'dislike']:
                 delta = 1 if action == 'like' else -1
-                # Check if already voted
                 async with db.execute("SELECT id FROM user_interactions WHERE user_id = ? AND preset_id = ? AND interaction_type IN ('like', 'dislike')", (user_id, preset_id)) as cursor:
                     existing = await cursor.fetchone()
 
@@ -653,7 +641,7 @@ app.router.add_get('/api/my_presets', get_my_presets_api)
 app.router.add_get('/api/profile', get_profile_api)
 app.router.add_route('OPTIONS', '/{path:.*}', handle_cors)
 
-# --- Keep Alive Task (Render Free Tier) ---
+# --- Keep Alive Task ---
 async def keep_alive():
     import aiohttp
     external_url = os.getenv("RENDER_EXTERNAL_URL")
@@ -666,7 +654,7 @@ async def keep_alive():
 
     while True:
         try:
-            await asyncio.sleep(600) # Ping every 10 minutes
+            await asyncio.sleep(600)
             async with aiohttp.ClientSession() as session:
                 async with session.get(target_url) as response:
                     if response.status == 200:
@@ -689,11 +677,8 @@ async def start_server():
 
 async def main():
     await init_db()
-    # Start web server
     asyncio.create_task(start_server())
-    # Start keep-alive ping
     asyncio.create_task(keep_alive())
-    # Start bot
     await dp.start_polling(bot)
 
 if __name__ == '__main__':
