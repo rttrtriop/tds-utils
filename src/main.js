@@ -504,17 +504,17 @@ function showToast(msg) {
 }
 
 const MODE_ICONS = {
-  "Easy": "https://static.wikia.nocookie.net/tower-defense-sim/images/8/87/EasyReworkIcon.png/revision/latest?cb=20250227044408",
-  "Casual": "https://static.wikia.nocookie.net/tower-defense-sim/images/0/02/GraveDiggerEasyIcon.png/revision/latest?cb=20241211213131",
-  "Intermediate": "https://static.wikia.nocookie.net/tower-defense-sim/images/9/96/PatientZeroIntermediateIcon.png/revision/latest?cb=20241211213411",
-  "Molten": "https://static.wikia.nocookie.net/tower-defense-sim/images/7/7f/MoltenBossMoltenIcon.png/revision/latest?cb=20241211213448",
-  "Fallen": "https://static.wikia.nocookie.net/tower-defense-sim/images/1/1c/FallenReworkIcon.png/revision/latest?cb=20240803164713",
-  "Frost": "https://static.wikia.nocookie.net/tower-defense-sim/images/e/ec/FrostModeIcon.png/revision/latest?cb=20251203204554",
-  "Hardcore": "https://static.wikia.nocookie.net/tower-defense-sim/images/d/dd/Hardcore2026Icon.png/revision/latest?cb=20260614105757",
-  "Voidcore": "https://static.wikia.nocookie.net/tower-defense-sim/images/9/94/VoidcoreIcon.png/revision/latest?cb=20260614105802",
-  "Pizza Party": "https://static.wikia.nocookie.net/tower-defense-sim/images/9/96/PizzaPartyIconNew.png/revision/latest?cb=20240622151720",
-  "Badlands II": "https://static.wikia.nocookie.net/tower-defense-sim/images/7/78/BadlandsIIIconNew.png/revision/latest?cb=20240622151658",
-  "Polluted Wasteland II": "https://static.wikia.nocookie.net/tower-defense-sim/images/b/bd/PollutedWastelandIIIconNew.png/revision/latest?cb=20240622151711"
+  "Easy": "https://static.wikia.nocookie.net/tower-defense-sim/images/8/87/EasyReworkIcon.png",
+  "Casual": "https://static.wikia.nocookie.net/tower-defense-sim/images/0/02/GraveDiggerEasyIcon.png",
+  "Intermediate": "https://static.wikia.nocookie.net/tower-defense-sim/images/9/96/PatientZeroIntermediateIcon.png",
+  "Molten": "https://static.wikia.nocookie.net/tower-defense-sim/images/7/7f/MoltenBossMoltenIcon.png",
+  "Fallen": "https://static.wikia.nocookie.net/tower-defense-sim/images/1/1c/FallenReworkIcon.png",
+  "Frost": "https://static.wikia.nocookie.net/tower-defense-sim/images/e/ec/FrostModeIcon.png",
+  "Hardcore": "https://static.wikia.nocookie.net/tower-defense-sim/images/d/dd/Hardcore2026Icon.png",
+  "Voidcore": "https://static.wikia.nocookie.net/tower-defense-sim/images/9/94/VoidcoreIcon.png",
+  "Pizza Party": "https://static.wikia.nocookie.net/tower-defense-sim/images/9/96/PizzaPartyIconNew.png",
+  "Badlands II": "https://static.wikia.nocookie.net/tower-defense-sim/images/7/78/BadlandsIIIconNew.png",
+  "Polluted Wasteland II": "https://static.wikia.nocookie.net/tower-defense-sim/images/b/bd/PollutedWastelandIIIconNew.png"
 };
 
 async function fetchCommunityPresets() {
