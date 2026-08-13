@@ -404,6 +404,9 @@ async def report_preset_api(request):
     except Exception as e:
         return web.json_response({"success": False, "error": str(e)}, status=500)
 
+async def health_check_api(request):
+    return web.Response(text="OK")
+
 async def get_bot_info_api(request):
     try:
         me = await bot.get_me()
@@ -547,24 +550,53 @@ app.router.add_get('/api/presets', get_presets_api)
 app.router.add_post('/api/tma/apply', apply_preset_tma_api)
 app.router.add_post('/api/interact', interact_preset_api)
 app.router.add_post('/api/report', report_preset_api)
+app.router.add_get('/health', health_check_api)
 app.router.add_get('/api/bot_info', get_bot_info_api)
 app.router.add_get('/api/favorites', get_favorites_api)
 app.router.add_get('/api/my_presets', get_my_presets_api)
 app.router.add_get('/api/profile', get_profile_api)
 app.router.add_route('OPTIONS', '/{path:.*}', handle_cors)
 
+# --- Keep Alive Task (Render Free Tier) ---
+async def keep_alive():
+    import aiohttp
+    external_url = os.getenv("RENDER_EXTERNAL_URL")
+    port = os.getenv("PORT", 8080)
+    target_url = external_url if external_url else f"http://127.0.0.1:{port}/health"
+    if external_url and not target_url.endswith('/health'):
+        target_url = f"{external_url}/health"
+
+    logging.info(f"Starting keep-alive task for {target_url}")
+
+    while True:
+        try:
+            await asyncio.sleep(600) # Ping every 10 minutes
+            async with aiohttp.ClientSession() as session:
+                async with session.get(target_url) as response:
+                    if response.status == 200:
+                        logging.info("Keep-alive ping successful")
+                    else:
+                        logging.warning(f"Keep-alive ping failed with status: {response.status}")
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            logging.error(f"Keep-alive ping error: {e}")
+
 # --- Runner ---
 async def start_server():
+    port = int(os.getenv("PORT", 8080))
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', 8080)
+    site = web.TCPSite(runner, '0.0.0.0', port)
     await site.start()
-    logging.info("aiohttp server started on port 8080")
+    logging.info(f"aiohttp server started on port {port}")
 
 async def main():
     await init_db()
     # Start web server
     asyncio.create_task(start_server())
+    # Start keep-alive ping
+    asyncio.create_task(keep_alive())
     # Start bot
     await dp.start_polling(bot)
 
