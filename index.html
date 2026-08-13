@@ -220,7 +220,13 @@
 
             <div style="display: flex; gap: 8px; margin-top: 8px;">
                 <input type="text" id="inpPresetName" placeholder="Название..." style="flex: 1; outline: none; font-size: 0.8rem;" class="liquid-input">
-                <button class="btn btn-primary liquid-btn" style="padding: 6px 12px;" id="btnSavePresetLocally">Сохранить локально</button>
+                <button class="btn btn-primary liquid-btn" style="padding: 6px 12px;" id="btnSavePresetLocally">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                </button>
+                <button class="btn liquid-btn" style="padding: 6px 12px; background: rgba(16, 185, 129, 0.2); color: var(--accent-emerald); border-color: var(--accent-emerald);" id="btnPublishFromRewards">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                    🌐 В библиотеку
+                </button>
             </div>
             <div style="display: flex; gap: 8px; margin-top: 8px;">
                 <div class="custom-dropdown" id="dropdownLocalPresets" data-value="" style="flex: 1;">
@@ -232,8 +238,14 @@
                         <!-- Populated via JS -->
                     </ul>
                 </div>
-                <button class="btn liquid-btn" style="padding: 6px 12px;" id="btnLoadLocalPreset">Загрузить</button>
-                <button class="btn liquid-btn danger-btn" style="padding: 6px 12px;" id="btnDeleteLocalPreset">Удалить</button>
+                <button class="btn liquid-btn" style="padding: 6px 12px;" id="btnLoadLocalPreset">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Загрузить
+                </button>
+                <button class="btn liquid-btn danger-btn" style="padding: 6px 12px;" id="btnDeleteLocalPreset">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    Удалить
+                </button>
             </div>
         </div>
 
@@ -258,9 +270,18 @@
     </div>
 
     <div class="drawer-tabs">
-        <button class="tab-btn active" data-target="lib-catalog">Каталог</button>
-        <button class="tab-btn" data-target="lib-publish">Публикация</button>
-        <button class="tab-btn" data-target="lib-profile">Профиль</button>
+        <button class="tab-btn active" data-target="lib-catalog">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            Каталог
+        </button>
+        <button class="tab-btn" data-target="lib-publish">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            Публикация
+        </button>
+        <button class="tab-btn" data-target="lib-profile">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            Профиль
+        </button>
     </div>
 
     <div class="drawer-content custom-scrollbar">
@@ -300,21 +321,51 @@
 
         <!-- Profile Tab -->
         <div id="lib-profile" class="tab-pane" style="display:none;">
-            <div id="authSection">
-                <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem;">
-                    Для сохранения и лайков войдите через Telegram.
-                </p>
-                <button class="btn btn-primary liquid-btn" id="btnFastLogin" style="width:100%;">📱 Войти через Telegram</button>
-                <p id="loginStatusText" style="font-size:0.8rem; margin-top:8px; color:var(--accent-emerald); text-align:center;"></p>
-            </div>
-            <div id="profileSection" style="display:none;">
-                <div class="stats-grid" id="profileStatsContainer"></div>
-                <h3 style="margin-top:16px; font-size:1rem;">Мои пресеты</h3>
+            <div id="profileSection">
+                <div id="authSection" style="text-align: center; margin-bottom: 1.5rem;">
+                    <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem;" id="loginHintText">
+                        Локальный профиль (Гость). Для публикации в общую библиотеку войдите через Telegram.
+                    </p>
+                    <button class="btn btn-primary liquid-btn" id="btnFastLogin" style="width:100%;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"></path><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                        Войти через Telegram
+                    </button>
+                    <p id="loginStatusText" style="font-size:0.8rem; margin-top:8px; color:var(--accent-emerald); text-align:center;"></p>
+                </div>
+                <div class="stats-grid" id="profileStatsContainer" style="display:none;"></div>
+
+                <h3 style="margin-top:16px; font-size:1rem;">Сохраненные локально пресеты</h3>
+                <ul class="dropdown-list custom-scrollbar" id="listProfileLocalPresets" style="display:block; position:static; opacity:1; transform:none; margin-bottom: 1rem; background: var(--bg-input);">
+                    <!-- Injected locally -->
+                </ul>
+
+                <h3 style="margin-top:16px; font-size:1rem;">Мои публикации</h3>
                 <div id="my-presets-list" class="presets-list"></div>
                 <h3 style="margin-top:16px; font-size:1rem;">Избранное</h3>
                 <div id="favorites-list" class="presets-list"></div>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Farm Action Modal -->
+<div id="farmActionModal">
+    <div class="farm-action-header">
+        <h3 id="farmActionTitle">Ферма Lvl 2</h3>
+        <p id="farmActionIncome">+$225 / волна</p>
+    </div>
+    <div class="farm-action-btns">
+        <button class="btn-upgrade" id="btnFarmUpgrade">
+            ⬆️ Прокачать до Lvl 3<br>
+            <span style="font-size: 0.8rem; opacity: 0.8;">Стоимость: $1250</span>
+        </button>
+        <button class="btn-sell" id="btnFarmSell">
+            💰 Продать<br>
+            <span style="font-size: 0.8rem; opacity: 0.8;">Получить: $550</span>
+        </button>
+        <button class="btn liquid-btn" id="btnFarmCancel" style="margin-top: 0.5rem; width: 100%;">
+            Отмена
+        </button>
     </div>
 </div>
 
