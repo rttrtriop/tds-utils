@@ -118,7 +118,7 @@ header {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border-light);
-  border-radius: 16px;
+  border-radius: 4px;
   padding: 1rem;
   margin-bottom: 1rem;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
@@ -131,7 +131,7 @@ header {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--border-light);
-  border-radius: 8px;
+  border-radius: 2px;
   color: var(--text-primary);
   transition: all 0.2s ease;
 }
@@ -223,7 +223,7 @@ header {
   flex-shrink: 0;
   background: var(--bg-input);
   border: 1px solid var(--border-light);
-  border-radius: 8px;
+  border-radius: 2px;
   padding: 8px 12px;
   display: flex;
   flex-direction: column;
@@ -280,7 +280,7 @@ header {
 /* Metrics & Strategy */
 .verdict-banner {
   padding: 12px;
-  border-radius: 8px;
+  border-radius: 2px;
   text-align: center;
   margin-bottom: 12px;
   border: 1px solid transparent;
@@ -317,7 +317,7 @@ header {
 .metric {
   background: var(--bg-input);
   border: 1px solid var(--border-light);
-  border-radius: 8px;
+  border-radius: 2px;
   padding: 10px;
   display: flex;
   flex-direction: column;
@@ -359,7 +359,7 @@ header {
   padding: 8px 12px;
   background: var(--bg-input);
   border: 1px solid var(--border-light);
-  border-radius: 6px;
+  border-radius: 2px;
   font-size: 0.85rem;
 }
 .strat-row.wait {
@@ -456,7 +456,7 @@ header {
 .input-control {
   display: flex;
   align-items: center;
-  border-radius: 8px;
+  border-radius: 2px;
   overflow: hidden;
 }
 
@@ -496,7 +496,7 @@ header {
   width: 44px;
   height: 24px;
   background: rgba(255,255,255,0.1);
-  border-radius: 12px;
+  border-radius: 4px;
   position: relative;
   cursor: pointer;
   transition: background 0.3s;
@@ -556,7 +556,7 @@ header {
   right: 0;
   background: var(--bg-dark);
   border: 1px solid var(--border-light);
-  border-radius: 8px;
+  border-radius: 2px;
   margin-top: 4px;
   max-height: 200px;
   overflow-y: auto; -webkit-overflow-scrolling: touch;
@@ -593,7 +593,7 @@ header {
 .wave-cell {
   background: var(--bg-input);
   border: 1px solid var(--border-light);
-  border-radius: 6px;
+  border-radius: 2px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -672,13 +672,13 @@ header {
   align-items: center;
   gap: 12px;
   padding: 12px;
-  border-radius: 8px;
+  border-radius: 2px;
 }
 
 .preset-icon {
   width: 40px;
   height: 40px;
-  border-radius: 8px;
+  border-radius: 2px;
   object-fit: contain;
   background: rgba(0,0,0,0.5);
   padding: 4px;
@@ -809,7 +809,7 @@ header {
   background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
   background-size: 200% 100%;
   animation: loading 1.5s infinite;
-  border-radius: 8px;
+  border-radius: 2px;
 }
 @keyframes loading {
   0% { background-position: 200% 0; }
@@ -851,7 +851,7 @@ header {
   text-align: center;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--border-light);
-  border-radius: 12px;
+  border-radius: 4px;
   color: var(--text-secondary);
 }
 .error-widget svg {
@@ -879,7 +879,7 @@ header {
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid var(--border-light);
   padding: 1.5rem;
-  border-radius: 16px;
+  border-radius: 4px;
   z-index: 1000;
   width: 90%;
   max-width: 320px;
@@ -915,7 +915,7 @@ header {
   color: var(--accent-emerald);
   border: 1px solid rgba(16, 185, 129, 0.3);
   padding: 10px;
-  border-radius: 8px;
+  border-radius: 2px;
   font-weight: 600;
   text-align: center;
   transition: background 0.2s;
@@ -926,7 +926,7 @@ header {
   color: var(--danger-color);
   border: 1px solid rgba(239, 68, 68, 0.3);
   padding: 10px;
-  border-radius: 8px;
+  border-radius: 2px;
   font-weight: 600;
   text-align: center;
   transition: background 0.2s;
@@ -944,7 +944,7 @@ header {
 .modal-content {
     background: var(--bg-dark);
     border: 1px solid var(--border-hover);
-    border-radius: 16px;
+    border-radius: 4px;
     padding: 24px;
     width: 90%;
     max-width: 500px;
@@ -1000,7 +1000,7 @@ header {
     border: 1px solid var(--accent-emerald);
     color: #fff;
     padding: 12px 24px;
-    border-radius: 8px;
+    border-radius: 2px;
     font-size: 0.9rem;
     box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
     z-index: 9999;
