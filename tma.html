@@ -175,7 +175,18 @@
       const tg = window.Telegram.WebApp;
       tg.expand();
 
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+
+function getEnvSafe(key, fallback) {
+    try {
+        if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
+            return import.meta.env[key];
+        }
+    } catch(e) {}
+    return fallback;
+}
+const API_URL = getEnvSafe('VITE_API_URL', 'https://tds-utils.onrender.com');
+const WS_URL = getEnvSafe('VITE_WS_URL', 'wss://tds-utils.onrender.com/ws');
+
       const tmaPresetsList = document.getElementById('tma-presets-list');
       const tmaFilterMode = document.getElementById('tma-filter-mode');
       const targetSessionIdIn = document.getElementById('target-session-id');

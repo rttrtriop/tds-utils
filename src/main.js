@@ -476,7 +476,18 @@ document.getElementById('btnRunSim').onclick = () => {
 };
 
 // --- Library & API Logic ---
-const API_URL = import.meta.env.VITE_API_URL || 'https://tds-utils.onrender.com';
+
+function getEnvSafe(key, fallback) {
+    try {
+        if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
+            return import.meta.env[key];
+        }
+    } catch(e) {}
+    return fallback;
+}
+const API_URL = getEnvSafe('VITE_API_URL', 'https://tds-utils.onrender.com');
+const WS_URL = getEnvSafe('VITE_WS_URL', 'wss://tds-utils.onrender.com/ws');
+
 let currentUserId = null;
 
 // Library Tabs
@@ -641,7 +652,7 @@ fetch(`${API_URL}/api/bot_info`).then(r => r.json()).then(d => BOT_USERNAME = d.
 /* removed fastlogin logic */
 
 function connectWebSocket() {
-  const wsUrl = import.meta.env.VITE_WS_URL || 'wss://tds-utils.onrender.com/ws';
+  const wsUrl = WS_URL;
   const ws = new WebSocket(wsUrl);
   ws.onopen = () => ws.send(JSON.stringify({ type: 'register', sessionId: sessionId }));
   ws.onmessage = (event) => {
