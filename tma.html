@@ -149,13 +149,27 @@
       </div>
 
       <div class="tma-content">
-        <div class="filter-group">
-          <select id="tma-filter-mode">
-            <option value="All">All Modes</option>
+        <div class="filter-group" style="display: flex; gap: 8px;">
+          <select id="tma-filter-mode" style="flex: 2;">
+            <option value="All">Все режимы</option>
             <option value="Easy">Easy</option>
+            <option value="Casual">Casual</option>
+            <option value="Intermediate">Intermediate</option>
+            <option value="Molten">Molten</option>
             <option value="Fallen">Fallen</option>
+            <option value="Frost">Frost</option>
             <option value="Hardcore">Hardcore</option>
-            <!-- Add others -->
+            <option value="Voidcore">Voidcore</option>
+            <option value="Pizza Party">Pizza Party</option>
+            <option value="Badlands II">Badlands II</option>
+            <option value="Polluted Wasteland II">Polluted Wasteland II</option>
+          </select>
+          <select id="tma-filter-players" style="flex: 1;">
+            <option value="All">Игроки: Все</option>
+            <option value="1">1P</option>
+            <option value="2">2P</option>
+            <option value="3">3P</option>
+            <option value="4">4P</option>
           </select>
         </div>
 
@@ -216,7 +230,12 @@ const WS_URL = getEnvSafe('VITE_WS_URL', 'wss://tds-utils.onrender.com/ws');
       async function fetchPresets() {
         tmaPresetsList.innerHTML = '<p>Loading...</p>';
         try {
-          const res = await fetch(`${API_URL}/api/presets?mode=${tmaFilterMode.value}`);
+
+          const pVal = document.getElementById('tma-filter-players').value;
+          let fetchUrl = `${API_URL}/api/presets?mode=${tmaFilterMode.value}`;
+          if (pVal !== "All") fetchUrl += `&players=${pVal}`;
+          const res = await fetch(fetchUrl);
+
           if (!res.ok) throw new Error('Failed');
           const presets = await res.json();
 
@@ -227,7 +246,21 @@ const WS_URL = getEnvSafe('VITE_WS_URL', 'wss://tds-utils.onrender.com/ws');
           }
 
           presets.forEach(p => {
-            const iconUrl = MODE_ICONS[p.mode] || MODE_ICONS["Easy"];
+
+            const ICONS = {
+                "Easy": "https://static.wikia.nocookie.net/tower-defense-sim/images/8/87/EasyReworkIcon.png",
+                "Casual": "https://static.wikia.nocookie.net/tower-defense-sim/images/0/02/GraveDiggerEasyIcon.png",
+                "Intermediate": "https://static.wikia.nocookie.net/tower-defense-sim/images/9/96/PatientZeroIntermediateIcon.png",
+                "Molten": "https://static.wikia.nocookie.net/tower-defense-sim/images/7/7f/MoltenBossMoltenIcon.png",
+                "Fallen": "https://static.wikia.nocookie.net/tower-defense-sim/images/1/1c/FallenReworkIcon.png",
+                "Frost": "https://static.wikia.nocookie.net/tower-defense-sim/images/e/ec/FrostModeIcon.png",
+                "Hardcore": "https://static.wikia.nocookie.net/tower-defense-sim/images/d/dd/Hardcore2026Icon.png",
+                "Voidcore": "https://static.wikia.nocookie.net/tower-defense-sim/images/9/94/VoidcoreIcon.png",
+                "Pizza Party": "https://static.wikia.nocookie.net/tower-defense-sim/images/9/96/PizzaPartyIconNew.png",
+                "Badlands II": "https://static.wikia.nocookie.net/tower-defense-sim/images/7/78/BadlandsIIIconNew.png",
+                "Polluted Wasteland II": "https://static.wikia.nocookie.net/tower-defense-sim/images/b/bd/PollutedWastelandIIIconNew.png"
+            };
+            const iconUrl = ICONS[p.mode] || ICONS["Easy"];
             const card = document.createElement('div');
             card.className = 'preset-card';
             card.innerHTML = `
@@ -249,6 +282,7 @@ const WS_URL = getEnvSafe('VITE_WS_URL', 'wss://tds-utils.onrender.com/ws');
       }
 
       tmaFilterMode.onchange = fetchPresets;
+      document.getElementById('tma-filter-players').onchange = fetchPresets;
       fetchPresets();
 
       window.applyToCalculator = async (presetId) => {

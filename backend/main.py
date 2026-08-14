@@ -1,5 +1,7 @@
 import asyncio
 import json
+import hashlib
+import secrets
 import logging
 import aiosqlite
 import os
@@ -31,8 +33,11 @@ async def init_db():
     async with aiosqlite.connect(DB_FILE) as db:
         await db.execute('''
         CREATE TABLE IF NOT EXISTS users (
-            user_id INTEGER PRIMARY KEY,
-            username TEXT,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE,
+            password_hash TEXT,
+            auth_token TEXT,
+            telegram_id INTEGER UNIQUE,
             presets_created INTEGER DEFAULT 0,
             presets_approved INTEGER DEFAULT 0
         )
@@ -99,33 +104,21 @@ async def start_handler(message: types.Message):
     
     if len(args) > 1:
         auth_key = args[1]
-        user_id = message.from_user.id
+        telegram_id = message.from_user.id
+        tg_username = message.from_user.username or 'Anonymous'
 
         async with aiosqlite.connect(DB_FILE) as db:
+            # Here session_id in auth_sessions actually stores the auth_token!
             async with db.execute("SELECT session_id FROM auth_sessions WHERE auth_key = ?", (auth_key,)) as cursor:
                 row = await cursor.fetchone()
 
             if row:
-                session_id = row[0]
-                if user_id not in user_sessions:
-                    user_sessions[user_id] = {}
-                user_sessions[user_id]['session_id'] = session_id
-
-                # Update user in DB
-                await db.execute("UPDATE users SET username = ? WHERE user_id = ?", (message.from_user.username or 'Anonymous', user_id))
+                auth_token = row[0]
+                # Update user in DB with telegram_id
+                await db.execute("UPDATE users SET telegram_id = ? WHERE auth_token = ?", (telegram_id, auth_token))
                 await db.commit()
 
-                # Notify web client of auth success
-                if session_id in active_websockets:
-                    try:
-                        await active_websockets[session_id].send_json({
-                            "type": "auth_success",
-                            "user_id": user_id,
-                            "username": message.from_user.username or 'Anonymous',
-                            "photo_url": ""
-                        })
-                    except Exception as e:
-                        logging.error(f"Error sending ws auth success: {e}")
+
 
                 await db.execute("DELETE FROM auth_sessions WHERE auth_key = ?", (auth_key,))
                 await db.commit()
@@ -133,13 +126,13 @@ async def start_handler(message: types.Message):
             else:
                 await message.answer("❌ Недействительный или устаревший ключ авторизации.")
     else:
-        await message.answer("👋 Добро пожаловать в <b>TDS STRATEGIST Бот</b>!\n\nДля работы с пресетами и сохранения стратегий вам нужно авторизоваться.\n\n🔗 <b>Как войти:</b>\n1. Перейдите на наш сайт.\n2. Откройте вкладку <b>«Библиотека & Профиль»</b>.\n3. Нажмите <b>«📱 Подключить Telegram»</b>.\n4. Бот автоматически свяжет ваш аккаунт!\n\nТакже вы можете использовать встроенный Mini App прямо в Telegram ⬇️", parse_mode="HTML")
+        await message.answer("👋 Добро пожаловать в <b>TDS STRATEGIST Бот</b>!\n\nДля работы с пресетами и сохранения стратегий вам нужно авторизоваться.\n\n🔗 <b>Как войти:</b>\n1. Перейдите на наш сайт.\n2. Откройте вкладку <b>«Библиотека & Профиль»</b>.\n3. Нажмите <b>«📱 Подключить Telegram»</b>.\n4. Бот автоматически свяжет ваш аккаунт!\n\nТакже вы можете использовать встроенный Mini App прямо в Telegram ⬇️\n\n💡 <b>Полезная команда:</b>\nНапишите /catalog, чтобы открыть инлайн-каталог режимов (работает даже если Mini App у вас не грузится!).", parse_mode="HTML")
 
 @dp.message(Command("profile"))
 async def profile_handler(message: types.Message):
     user_id = message.from_user.id
     async with aiosqlite.connect(DB_FILE) as db:
-        async with db.execute("SELECT presets_created, presets_approved FROM users WHERE user_id = ?", (user_id,)) as cursor:
+        async with db.execute("SELECT presets_created, presets_approved, telegram_id, id FROM users WHERE auth_token = ?", (token,)) as cursor:
             row = await cursor.fetchone()
 
     if row:
@@ -493,6 +486,68 @@ async def root_handler(request):
 async def health_check_api(request):
     return web.Response(text="OK")
 
+
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def generate_token() -> str:
+    return secrets.token_hex(32)
+
+async def register_api(request):
+    try:
+        data = await request.json()
+        username = data.get('username')
+        password = data.get('password')
+        if not username or not password:
+            return web.json_response({"error": "Missing credentials"}, status=400)
+
+        async with aiosqlite.connect(DB_FILE) as db:
+            async with db.execute("SELECT id FROM users WHERE username = ?", (username,)) as cursor:
+                if await cursor.fetchone():
+                    return web.json_response({"error": "Username already taken"}, status=400)
+
+            token = generate_token()
+            p_hash = hash_password(password)
+            await db.execute("INSERT INTO users (username, password_hash, auth_token) VALUES (?, ?, ?)",
+                             (username, p_hash, token))
+            await db.commit()
+
+        return web.json_response({"success": True, "token": token, "username": username})
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=500)
+
+
+async def unlink_api(request):
+    try:
+        token = request.headers.get('Authorization')
+        if not token:
+            return web.json_response({"error": "Token required"}, status=401)
+        token = token.replace('Bearer ', '')
+
+        async with aiosqlite.connect(DB_FILE) as db:
+            await db.execute("UPDATE users SET telegram_id = NULL WHERE auth_token = ?", (token,))
+            await db.commit()
+            return web.json_response({"success": True})
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=500)
+
+async def login_api(request):
+    try:
+        data = await request.json()
+        username = data.get('username')
+        password = data.get('password')
+
+        async with aiosqlite.connect(DB_FILE) as db:
+            async with db.execute("SELECT auth_token FROM users WHERE username = ? AND password_hash = ?",
+                                  (username, hash_password(password))) as cursor:
+                row = await cursor.fetchone()
+                if not row:
+                    return web.json_response({"error": "Invalid credentials"}, status=401)
+
+                return web.json_response({"success": True, "token": row[0], "username": username})
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=500)
+
 async def get_bot_info_api(request):
     try:
         me = await bot.get_me()
@@ -502,9 +557,10 @@ async def get_bot_info_api(request):
 
 async def get_my_presets_api(request):
     try:
-        user_id = request.query.get('user_id')
-        if not user_id:
-            return web.json_response({"error": "User ID required"}, status=400)
+        token = request.headers.get('Authorization')
+        if not token:
+            return web.json_response({"error": "Token required"}, status=401)
+        token = token.replace('Bearer ', '')
 
         async with aiosqlite.connect(DB_FILE) as db:
             async with db.execute("SELECT id, title, mode, players, likes FROM presets WHERE status = 'approved' AND user_id = ?", (user_id,)) as cursor:
@@ -639,6 +695,9 @@ app.router.add_post('/api/tma/apply', apply_preset_tma_api)
 app.router.add_post('/api/interact', interact_preset_api)
 app.router.add_post('/api/report', report_preset_api)
 
+app.router.add_post('/api/register', register_api)
+app.router.add_post('/api/login', login_api)
+app.router.add_post('/api/unlink', unlink_api)
 app.router.add_get('/', root_handler)
 app.router.add_get('/health', health_check_api)
 

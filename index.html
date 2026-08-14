@@ -120,6 +120,32 @@
     </div>
 </div>
 
+
+<!-- Auth Overlays -->
+<div class="drawer-overlay" id="authOverlay"></div>
+
+<div class="drawer" id="authDrawer">
+    <div class="drawer-header">
+        <span id="authDrawerTitle">Вход в систему</span>
+        <button class="btn liquid-btn" style="padding: 4px 8px;" id="btnCloseAuthDrawer">✕</button>
+    </div>
+    <div class="drawer-content custom-scrollbar" style="display:flex; flex-direction:column; gap: 16px;">
+        <div id="authErrorMsg" style="color: var(--danger-color); font-size: 0.9rem; text-align: center; display: none;"></div>
+        <div class="input-group">
+            <label>Имя пользователя</label>
+            <input type="text" id="inpAuthUser" class="liquid-input" placeholder="Введите логин" style="width:100%; padding:10px;">
+        </div>
+        <div class="input-group">
+            <label>Пароль</label>
+            <input type="password" id="inpAuthPass" class="liquid-input" placeholder="••••••••" style="width:100%; padding:10px;">
+        </div>
+        <button class="btn btn-primary liquid-btn" id="btnSubmitAuth" style="width:100%; padding:12px; font-size:1.1rem;">Войти</button>
+        <div style="text-align: center; margin-top: 10px;">
+            <a href="#" id="btnToggleAuthMode" style="color: var(--accent-emerald); font-size: 0.9rem; text-decoration: none;">Нет аккаунта? Зарегистрироваться</a>
+        </div>
+    </div>
+</div>
+
 <!-- Drawer Overlay -->
 <div class="drawer-overlay" id="drawerOverlay"></div>
 
@@ -347,12 +373,10 @@
             <div id="profileSection">
                 <div id="profileGuest">
                     <div style="background: var(--bg-card); border: 1px solid var(--danger-color); border-radius: 12px; padding: 20px; margin-bottom: 20px; text-align: center;">
-                        <h3 style="margin-top:0; color: var(--danger-color);">Вы не вошли в аккаунт</h3>
-                        <p style="color: var(--text-secondary); font-size: 0.9em;">Для публикации и сохранения пресетов подключите Telegram.</p>
+                        <h3 style="margin-top:0; color: var(--danger-color);">Вход не выполнен</h3>
+                        <p style="color: var(--text-secondary); font-size: 0.9em;">Войдите или зарегистрируйтесь, чтобы сохранять и публиковать пресеты.</p>
                     </div>
-                    <button class="btn btn-accent liquid-btn" id="btnConnectTelegram" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                        📱 Подключить Telegram
-                    </button>
+                    <button class="btn btn-primary liquid-btn" id="btnOpenAuth" style="width: 100%; margin-bottom: 12px;">Войти / Регистрация</button>
                 </div>
 
                 <div id="profileAuth" style="display: none; text-align: center;">
@@ -372,7 +396,20 @@
                             <div style="font-size: 12px; color: var(--text-tertiary);">Лайки</div>
                         </div>
                     </div>
-                </div>
+
+                    <div id="tgLinkSection" style="margin-top: 20px;">
+                        <button class="btn btn-accent liquid-btn" id="btnConnectTelegram" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                            📱 Подключить Telegram
+                        </button>
+                        <button class="btn btn-danger liquid-btn" id="btnUnlinkTelegram" style="width: 100%; display: none; align-items: center; justify-content: center; gap: 8px; margin-top:8px;">
+                            Отвязать Telegram
+                        </button>
+                        <button class="btn liquid-btn" id="btnLogout" style="width: 100%; margin-top: 8px;">
+                            Выйти из аккаунта
+                        </button>
+                    </div>
+
+</div>
 
                 <h3 style="margin-top:16px; font-size:1rem;">Сохраненные локально пресеты</h3>
                 <ul class="dropdown-list custom-scrollbar" id="listProfileLocalPresets" style="display:block; position:static; opacity:1; transform:none; margin-bottom: 1rem; background: var(--bg-input);">
