@@ -1086,3 +1086,7 @@ window.addEventListener('load', () => {
 setTimeout(() => {
     updateProfileUI();
 }, 100);
+
+
+window.fetchProfileData = fetchProfileData;
+window.fetchCommunityPresets = fetchCommunityPresets;
