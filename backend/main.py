@@ -678,7 +678,7 @@ async def handle_cors(request):
     return web.Response(text="OK", headers={
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
     })
 
 async def app_middleware(app, handler):
@@ -686,7 +686,7 @@ async def app_middleware(app, handler):
         response = await handler(request)
         response.headers['Access-Control-Allow-Origin'] = '*'
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
         return response
     return middleware_handler
 
