@@ -929,13 +929,15 @@ const authOverlay = document.getElementById('authOverlay');
 const authDrawer = document.getElementById('authDrawer');
 let isLoginMode = true;
 
-const btnOpenAuth = document.getElementById('btnOpenAuth');
-if(btnOpenAuth) {
-    btnOpenAuth.onclick = () => {
+document.addEventListener('click', (e) => {
+    if (e.target && e.target.id === 'btnOpenAuth') {
         authOverlay.classList.add('active');
         authDrawer.classList.add('active');
-    };
-}
+    }
+});
+
+
+
 
 const closeAuth = () => {
     authOverlay.classList.remove('active');
