@@ -615,8 +615,8 @@ window.interactPreset = async (id, action, e) => {
     try {
         const res = await fetch(`${API_URL}/api/interact`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ preset_id: id, action: action, user_id: currentUserId || 0 })
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+            body: JSON.stringify({ preset_id: id, action: action })
         });
         if (res.ok) {
             showToast(action === 'like' ? 'Лайк поставлен!' : 'Сохранено!');
@@ -632,7 +632,7 @@ window.reportPreset = async (id, e) => {
     try {
         const res = await fetch(`${API_URL}/api/report`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
             body: JSON.stringify({ preset_id: id, reason })
         });
         if (res.ok) showToast('Жалоба отправлена');
@@ -664,7 +664,7 @@ function connectWebSocket() {
       } else if (data.type === 'auth_success') {
           currentUser = data;
           if (typeof updateProfileUI !== 'undefined') {
-              updateProfileUI(currentUser);
+              updateProfileUI();
           }
           showToast('✅ Аккаунт привязан!');
       }
@@ -731,17 +731,26 @@ function renderProfileLocalPresets() {
 async function fetchProfileData() {
     renderProfileLocalPresets();
 
-    if(!currentUserId) return;
+    if(!authToken) return;
     try {
-        const resProfile = await fetch(`${API_URL}/api/profile?user_id=${currentUserId}`);
+        const resProfile = await fetch(`${API_URL}/api/profile`, {
+            headers: {'Authorization': 'Bearer ' + authToken}
+        });
         const data = await resProfile.json();
 
         document.getElementById('profileStatsContainer').innerHTML = `
             <div class="metric"><span class="lbl">Пресеты</span><span class="val">${data.created||0}</span></div>
             <div class="metric"><span class="lbl">Лайки</span><span class="val emerald">${data.total_likes||0}</span></div>
         `;
+        if (data.telegram_linked) {
+            document.getElementById('btnConnectTelegram').style.display = 'none';
+            document.getElementById('btnUnlinkTelegram').style.display = 'flex';
+        } else {
+            document.getElementById('btnConnectTelegram').style.display = 'flex';
+            document.getElementById('btnUnlinkTelegram').style.display = 'none';
+        }
 
-        const resFav = await fetch(`${API_URL}/api/favorites?user_id=${currentUserId}`);
+        const resFav = await fetch(`${API_URL}/api/favorites`, { headers: {'Authorization': 'Bearer ' + authToken} });
         const favs = await resFav.json();
         const favList = document.getElementById('favorites-list');
         favList.innerHTML = '';
@@ -751,7 +760,7 @@ async function fetchProfileData() {
             favs.forEach(p => renderPresetCard(p, favList));
         }
 
-        const resMy = await fetch(`${API_URL}/api/my_presets?user_id=${currentUserId}`);
+        const resMy = await fetch(`${API_URL}/api/my_presets`, { headers: {'Authorization': 'Bearer ' + authToken} });
         const my = await resMy.json();
         const myList = document.getElementById('my-presets-list');
         myList.innerHTML = '';
@@ -801,7 +810,7 @@ document.getElementById('btnPublishPreset').onclick = async () => {
     try {
         const res = await fetch(`${API_URL}/api/publish`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
             body: JSON.stringify({
                 title: title,
                 mode: presetData.mode,
@@ -904,82 +913,150 @@ renderModeDropdowns();
 
 
 // Auth & TMA Logic
-let currentUser = null;
 
-async function handleDeepLinkAuth() {
+
+
+
+
+
+
+
+let authToken = localStorage.getItem('tdsAuthToken') || null;
+let currentUsername = localStorage.getItem('tdsUsername') || null;
+
+// Auth UI Logic
+const authOverlay = document.getElementById('authOverlay');
+const authDrawer = document.getElementById('authDrawer');
+let isLoginMode = true;
+
+const btnOpenAuth = document.getElementById('btnOpenAuth');
+if(btnOpenAuth) {
+    btnOpenAuth.onclick = () => {
+        authOverlay.classList.add('active');
+        authDrawer.classList.add('active');
+    };
+}
+
+const closeAuth = () => {
+    authOverlay.classList.remove('active');
+    authDrawer.classList.remove('active');
+};
+document.getElementById('btnCloseAuthDrawer').onclick = closeAuth;
+authOverlay.onclick = closeAuth;
+
+document.getElementById('btnToggleAuthMode').onclick = (e) => {
+    e.preventDefault();
+    isLoginMode = !isLoginMode;
+    document.getElementById('authDrawerTitle').textContent = isLoginMode ? "Вход в систему" : "Регистрация";
+    document.getElementById('btnSubmitAuth').textContent = isLoginMode ? "Войти" : "Зарегистрироваться";
+    document.getElementById('btnToggleAuthMode').textContent = isLoginMode ? "Нет аккаунта? Зарегистрироваться" : "Уже есть аккаунт? Войти";
+};
+
+document.getElementById('btnSubmitAuth').onclick = async () => {
+    const user = document.getElementById('inpAuthUser').value.trim();
+    const pass = document.getElementById('inpAuthPass').value.trim();
+    const err = document.getElementById('authErrorMsg');
+
+    if(!user || !pass) {
+        err.textContent = "Заполните все поля";
+        err.style.display = 'block';
+        return;
+    }
+
+    const endpoint = isLoginMode ? '/api/login' : '/api/register';
+    document.getElementById('btnSubmitAuth').disabled = true;
+
     try {
-        const res = await fetch(`${API_URL}/api/auth/generate`, {
+        const res = await fetch(API_URL + endpoint, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ session_id: sessionId })
+            body: JSON.stringify({username: user, password: pass})
+        });
+        const data = await res.json();
+        if(data.success) {
+            authToken = data.token;
+            currentUsername = data.username;
+            localStorage.setItem('tdsAuthToken', authToken);
+            localStorage.setItem('tdsUsername', currentUsername);
+
+            closeAuth();
+            showToast("Успешный вход!");
+            updateProfileUI();
+        } else {
+            err.textContent = data.error;
+            err.style.display = 'block';
+        }
+    } catch (e) {
+        err.textContent = "Ошибка сети";
+        err.style.display = 'block';
+    } finally {
+        document.getElementById('btnSubmitAuth').disabled = false;
+    }
+};
+
+document.getElementById('btnLogout').onclick = () => {
+    authToken = null;
+    currentUsername = null;
+    localStorage.removeItem('tdsAuthToken');
+    localStorage.removeItem('tdsUsername');
+    updateProfileUI();
+    showToast("Вы вышли из аккаунта");
+};
+
+document.getElementById('btnUnlinkTelegram').onclick = async () => {
+    try {
+        const res = await fetch(API_URL + '/api/unlink', {
+            method: 'POST',
+            headers: {'Authorization': 'Bearer ' + authToken}
+        });
+        if(res.ok) {
+            showToast("Telegram успешно отвязан");
+            updateProfileUI();
+        }
+    } catch(e) { showToast("Ошибка сети"); }
+};
+
+function updateProfileUI() {
+    const profileGuest = document.getElementById('profileGuest');
+    const profileAuth = document.getElementById('profileAuth');
+
+    if (authToken) {
+        profileGuest.style.display = 'none';
+        profileAuth.style.display = 'block';
+
+        document.getElementById('profileUsername').textContent = currentUsername;
+
+        let firstLetter = currentUsername.charAt(0).toUpperCase();
+        document.getElementById('profileAvatar').innerHTML = firstLetter;
+
+        fetchProfileData();
+    } else {
+        profileGuest.style.display = 'block';
+        profileAuth.style.display = 'none';
+        document.getElementById('favorites-list').innerHTML = '';
+        document.getElementById('my-presets-list').innerHTML = '';
+    }
+}
+
+async function handleDeepLinkAuth() {
+    if(!authToken) { showToast("Сначала войдите в аккаунт"); return; }
+    try {
+        const res = await fetch(API_URL + '/api/auth/generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + authToken
+            },
+            body: JSON.stringify({})
         });
         const data = await res.json();
         if (data.auth_key) {
-            window.location.href = `https://t.me/tdslib_bot?start=${data.auth_key}`;
+            window.location.href = 'https://t.me/tdslib_bot?start=' + data.auth_key;
         }
     } catch(e) {
         showToast('Ошибка генерации ключа');
     }
 }
-
-function updateProfileUI(user) {
-    const profileGuest = document.getElementById('profileGuest');
-    const profileAuth = document.getElementById('profileAuth');
-    const profileAvatar = document.getElementById('profileAvatar');
-    const profileUsername = document.getElementById('profileUsername');
-
-    if (!user) {
-        if(profileGuest) profileGuest.style.display = 'block';
-        if(profileAuth) profileAuth.style.display = 'none';
-        return;
-    }
-
-    if(profileGuest) profileGuest.style.display = 'none';
-    if(profileAuth) profileAuth.style.display = 'block';
-    if(profileUsername) profileUsername.textContent = user.username || 'Аноним';
-
-    if (profileAvatar) {
-        if (user.photo_url) {
-            profileAvatar.innerHTML = `<img src="${user.photo_url}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
-        } else {
-            const firstLetter = (user.username || 'U').charAt(0).toUpperCase();
-            profileAvatar.innerHTML = firstLetter;
-        }
-    }
-
-    // Fetch stats
-    fetch(`${API_URL}/api/profile?user_id=${user.user_id}`)
-        .then(res => res.json())
-        .then(data => {
-            if(!data.error) {
-                const c = document.getElementById('statCreated'); if(c) c.textContent = data.created || 0;
-                const a = document.getElementById('statApproved'); if(a) a.textContent = data.approved || 0;
-                const l = document.getElementById('statLikes'); if(l) l.textContent = data.total_likes || 0;
-            }
-        }).catch(e => console.error(e));
-}
-
-function initTMAAuth() {
-    if (window.Telegram && window.Telegram.WebApp) {
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-            currentUser = {
-                user_id: tg.initDataUnsafe.user.id,
-                username: tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name,
-                photo_url: tg.initDataUnsafe.user.photo_url
-            };
-            updateProfileUI(currentUser);
-        }
-    }
-}
-initTMAAuth();
-
-const btnConnect = document.getElementById('btnConnectTelegram');
-if(btnConnect) {
-    btnConnect.addEventListener('click', handleDeepLinkAuth);
-}
-
 
 // Hide global loader when DOM and everything is ready
 window.addEventListener('load', () => {
@@ -990,3 +1067,7 @@ window.addEventListener('load', () => {
         }, 500); // Small delay for smooth effect
     }
 });
+
+setTimeout(() => {
+    updateProfileUI();
+}, 100);
