@@ -807,6 +807,12 @@ document.getElementById('btnPublishPreset').onclick = async () => {
         rewards: waveRewardsData.slice(0, parseInt(inpModeWaves.value))
     };
 
+    if (!authToken) {
+        showToast("Для публикации нужно войти в аккаунт!");
+        document.getElementById('btnPublishPreset').disabled = false;
+        return;
+    }
+
     try {
         const res = await fetch(`${API_URL}/api/publish`, {
             method: 'POST',
@@ -815,16 +821,19 @@ document.getElementById('btnPublishPreset').onclick = async () => {
                 title: title,
                 mode: presetData.mode,
                 players: presetData.players,
-                presetData: presetData,
-                user_id: currentUserId || 0
+                presetData: presetData
             })
         });
-        if (res.ok) {
+        const data = await res.json();
+
+        if (res.ok && data.success) {
             showToast("Пресет отправлен на модерацию!");
             document.getElementById('inpPublishTitle').value = '';
+        } else {
+            showToast(data.error || "Ошибка публикации");
         }
     } catch (e) {
-        showToast("Сохранено локально / Нет связи с сервером");
+        showToast("Нет связи с сервером");
     } finally {
         document.getElementById('btnPublishPreset').disabled = false;
     }
@@ -1039,6 +1048,14 @@ function updateProfileUI() {
         document.getElementById('my-presets-list').innerHTML = '';
     }
 }
+
+
+document.addEventListener('click', (e) => {
+    const el = e.target.closest('#btnConnectTelegram');
+    if (el) {
+        handleDeepLinkAuth();
+    }
+});
 
 async function handleDeepLinkAuth() {
     if(!authToken) { showToast("Сначала войдите в аккаунт"); return; }
