@@ -82,18 +82,15 @@ user_sessions: Dict[int, Dict[str, Any]] = {}
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-async def update_user_stats(user_id: int, username: str, created: int = 0, approved: int = 0):
+async def update_user_stats(telegram_id: int, username: str, created: int = 0, approved: int = 0):
     async with aiosqlite.connect(DB_FILE) as db:
-        async with db.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)) as cursor:
+        async with db.execute("SELECT id FROM users WHERE telegram_id = ?", (telegram_id,)) as cursor:
             row = await cursor.fetchone()
-            if not row:
-                await db.execute("INSERT INTO users (user_id, username, presets_created, presets_approved) VALUES (?, ?, ?, ?)",
-                               (user_id, username, created, approved))
-            else:
+            if row:
                 if created:
-                    await db.execute("UPDATE users SET presets_created = presets_created + ? WHERE user_id = ?", (created, user_id))
+                    await db.execute("UPDATE users SET presets_created = presets_created + ? WHERE telegram_id = ?", (created, telegram_id))
                 if approved:
-                    await db.execute("UPDATE users SET presets_approved = presets_approved + ? WHERE user_id = ?", (approved, user_id))
+                    await db.execute("UPDATE users SET presets_approved = presets_approved + ? WHERE telegram_id = ?", (approved, telegram_id))
         await db.commit()
 
 @dp.message(Command("start"))
@@ -132,7 +129,7 @@ async def start_handler(message: types.Message):
 async def profile_handler(message: types.Message):
     user_id = message.from_user.id
     async with aiosqlite.connect(DB_FILE) as db:
-        async with db.execute("SELECT presets_created, presets_approved, telegram_id, id FROM users WHERE auth_token = ?", (token,)) as cursor:
+        async with db.execute("SELECT presets_created, presets_approved, telegram_id, id, username FROM users WHERE auth_token = ?", (token,)) as cursor:
             row = await cursor.fetchone()
 
     if row:
@@ -604,7 +601,7 @@ async def get_profile_api(request):
             if not row:
                 return web.json_response({"error": "User not found"}, status=404)
 
-            async with db.execute("SELECT SUM(likes) FROM presets WHERE user_id = ?", (user_id,)) as cursor:
+            async with db.execute("SELECT SUM(likes) FROM presets WHERE user_id = ?", (db_user_id,)) as cursor:
                 likes_row = await cursor.fetchone()
                 total_likes = likes_row[0] if likes_row and likes_row[0] else 0
 
@@ -626,7 +623,7 @@ async def get_presets_api(request):
                 async with db.execute("""
                     SELECT p.id, p.title, p.mode, p.players, p.likes, u.username
                     FROM presets p
-                    LEFT JOIN users u ON p.user_id = u.user_id
+                    LEFT JOIN users u ON p.user_id = u.id
                     WHERE p.status = 'approved' AND p.mode = ?
                 """, (mode_filter,)) as cursor:
                     presets = await cursor.fetchall()
@@ -634,7 +631,7 @@ async def get_presets_api(request):
                 async with db.execute("""
                     SELECT p.id, p.title, p.mode, p.players, p.likes, u.username
                     FROM presets p
-                    LEFT JOIN users u ON p.user_id = u.user_id
+                    LEFT JOIN users u ON p.user_id = u.id
                     WHERE p.status = 'approved'
                 """) as cursor:
                     presets = await cursor.fetchall()
