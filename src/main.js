@@ -732,6 +732,17 @@ async function fetchProfileData() {
         const resProfile = await fetch(`${API_URL}/api/profile`, {
             headers: {'Authorization': 'Bearer ' + authToken}
         });
+
+        if (resProfile.status === 401 || !resProfile.ok) {
+            localStorage.removeItem('tdsAuthToken');
+            localStorage.removeItem('tdsUsername');
+            authToken = null;
+            currentUsername = null;
+            updateProfileUI();
+            showToast("Сессия устарела. Пожалуйста, войдите снова.");
+            return;
+        }
+
         const data = await resProfile.json();
 
         document.getElementById('profileStatsContainer').innerHTML = `
