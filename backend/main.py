@@ -354,12 +354,22 @@ async def publish_preset_api(request):
         is_appeal = data.get('is_appeal', False)
         appeal_reason = data.get('appeal_reason', '')
 
-        author_id = data.get('user_id')
-        if not author_id:
-            # ИСПРАВЛЕНО: abs() предотвратит отрицательные айдишники
-            author_id = abs(hash(author_username)) % 1000000000
+        token = request.headers.get('Authorization')
+        if not token: return web.json_response({"error": "Token required (login to publish)"}, status=401)
+        token = token.replace('Bearer ', '')
 
-        await update_user_stats(author_id, author_username, created=1)
+        async with aiosqlite.connect(DB_FILE) as db:
+            async with db.execute("SELECT id, username FROM users WHERE auth_token = ?", (token,)) as user_cur:
+                u_row = await user_cur.fetchone()
+                if not u_row: return web.json_response({"error": "Invalid token"}, status=401)
+                author_id = u_row[0]
+                author_username = u_row[1]
+
+        # No need for update_user_stats here, let's just use author_id in the insert
+        # Actually wait, update_user_stats expects telegram_id now. We should just update presets_created directly.
+        async with aiosqlite.connect(DB_FILE) as db:
+            await db.execute("UPDATE users SET presets_created = presets_created + 1 WHERE id = ?", (author_id,))
+            await db.commit()
 
         async with aiosqlite.connect(DB_FILE) as db:
             async with db.execute("SELECT id FROM presets WHERE mode = ? AND status = 'approved'", (mode,)) as cursor:
