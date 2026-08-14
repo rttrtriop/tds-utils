@@ -600,27 +600,25 @@ async def get_favorites_api(request):
 
 async def get_profile_api(request):
     try:
-        user_id = request.query.get('user_id')
-        if not user_id:
-            return web.json_response({"error": "User ID required"}, status=400)
+        token = request.headers.get('Authorization')
+        if not token:
+            return web.json_response({"error": "Token required"}, status=401)
+        token = token.replace('Bearer ', '')
 
         async with aiosqlite.connect(DB_FILE) as db:
-            async with db.execute("SELECT username, presets_created, presets_approved FROM users WHERE user_id = ?", (user_id,)) as cursor:
+            async with db.execute("SELECT presets_created, presets_approved, telegram_id, id, username FROM users WHERE auth_token = ?", (token,)) as cursor:
                 row = await cursor.fetchone()
+                if not row:
+                    return web.json_response({"error": "Invalid token"}, status=401)
 
-            if not row:
-                return web.json_response({"error": "User not found"}, status=404)
+                telegram_id = row[2]
+                db_user_id = row[3]
 
             async with db.execute("SELECT SUM(likes) FROM presets WHERE user_id = ?", (db_user_id,)) as cursor:
                 likes_row = await cursor.fetchone()
                 total_likes = likes_row[0] if likes_row and likes_row[0] else 0
 
-        return web.json_response({
-            "username": row[0],
-            "created": row[1],
-            "approved": row[2],
-            "total_likes": total_likes
-        })
+            return web.json_response({"created": row[0], "approved": row[1], "total_likes": total_likes, "telegram_linked": bool(telegram_id), "username": row[4]})
     except Exception as e:
         return web.json_response({"error": str(e)}, status=500)
 
