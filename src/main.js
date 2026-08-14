@@ -476,7 +476,7 @@ document.getElementById('btnRunSim').onclick = () => {
 };
 
 // --- Library & API Logic ---
-const API_URL = import.meta.env.VITE_API_URL || 'https://tds-utils.onrender.com';
+const API_URL = import.meta.env?.VITE_API_URL || 'https://tds-utils.onrender.com';
 let currentUserId = null;
 
 // Library Tabs
@@ -641,7 +641,7 @@ fetch(`${API_URL}/api/bot_info`).then(r => r.json()).then(d => BOT_USERNAME = d.
 /* removed fastlogin logic */
 
 function connectWebSocket() {
-  const wsUrl = import.meta.env.VITE_WS_URL || 'wss://tds-utils.onrender.com/ws';
+  const wsUrl = import.meta.env?.VITE_WS_URL || 'wss://tds-utils.onrender.com/ws';
   const ws = new WebSocket(wsUrl);
   ws.onopen = () => ws.send(JSON.stringify({ type: 'register', sessionId: sessionId }));
   ws.onmessage = (event) => {

@@ -175,7 +175,7 @@
       const tg = window.Telegram.WebApp;
       tg.expand();
 
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+      const API_URL = import.meta.env?.VITE_API_URL || 'https://tds-utils.onrender.com';
       const tmaPresetsList = document.getElementById('tma-presets-list');
       const tmaFilterMode = document.getElementById('tma-filter-mode');
       const targetSessionIdIn = document.getElementById('target-session-id');
