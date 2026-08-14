@@ -477,16 +477,10 @@ document.getElementById('btnRunSim').onclick = () => {
 
 // --- Library & API Logic ---
 
-function getEnvSafe(key, fallback) {
-    try {
-        if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
-            return import.meta.env[key];
-        }
-    } catch(e) {}
-    return fallback;
-}
-const API_URL = getEnvSafe('VITE_API_URL', 'https://tds-utils.onrender.com');
-const WS_URL = getEnvSafe('VITE_WS_URL', 'wss://tds-utils.onrender.com/ws');
+
+const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:8080' : 'https://tds-utils.onrender.com';
+const WS_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'ws://localhost:8080/ws' : 'wss://tds-utils.onrender.com/ws';
+
 
 let currentUserId = null;
 
