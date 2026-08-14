@@ -178,11 +178,7 @@
         </div>
       </div>
 
-      <!-- Session Input for Desktop Sync -->
-      <div style="padding: 0 1rem; margin-bottom: 1rem;">
-        <label style="font-size: 0.8rem; color: var(--text-secondary);">Target Desktop Session ID (Optional):</label>
-        <input type="text" id="target-session-id" placeholder="e.g. 123456" style="width: 100%; margin-top: 0.5rem;" />
-      </div>
+
     </div>
 
     <script type="module">
@@ -190,7 +186,7 @@
       tg.expand();
 
 
-const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:8080' : 'https://tds-utils.onrender.com';
+const API_URL = 'https://tds-utils.onrender.com';
 const WS_URL = getEnvSafe('VITE_WS_URL', 'wss://tds-utils.onrender.com/ws');
 
       const tmaPresetsList = document.getElementById('tma-presets-list');
@@ -278,17 +274,13 @@ const WS_URL = getEnvSafe('VITE_WS_URL', 'wss://tds-utils.onrender.com/ws');
       fetchPresets();
 
       window.applyToCalculator = async (presetId) => {
-        const sid = targetSessionIdIn.value.trim();
         let payload = { preset_id: presetId };
 
-        // If user typed a session ID, send to that session.
-        if (sid) {
-          payload.target_session = sid;
-        } else if (user && user.id) {
-          // Otherwise rely on backend knowing user's linked session via bot
+        if (user && user.id) {
+          // Send preset to linked web account
           payload.telegram_user_id = user.id;
         } else {
-          tg.showAlert("Please enter a Desktop Session ID or ensure you started the bot with your session link.");
+          tg.showAlert("Telegram account not found.");
           return;
         }
 
