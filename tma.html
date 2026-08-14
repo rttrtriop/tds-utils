@@ -6,51 +6,141 @@
     <title>TDS STRATEGIST - Mini App</title>
     <link rel="stylesheet" href="./src/style.css" />
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
     <style>
-      /* Overrides for mobile/TMA */
       body {
+        margin: 0;
         padding: 0;
-        background-color: var(--bg-color); /* Fallback */
+        background-color: #0B0C10;
+        color: #C5C6C7;
+        font-family: 'Inter', sans-serif;
+        overflow: hidden;
+        position: fixed;
+        width: 100vw;
+        height: 100vh;
       }
       #tma-app {
         display: flex;
         flex-direction: column;
-        height: 100vh;
+        height: 100%;
+        background: radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.1) 0%, transparent 50%),
+                    radial-gradient(circle at 50% 100%, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
       }
       .tma-header {
         padding: 1rem;
         text-align: center;
-        border-bottom: 1px solid var(--border-color);
-        background: rgba(0,0,0,0.5);
+        background: rgba(11, 12, 16, 0.6);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-bottom: 1px solid rgba(16, 185, 129, 0.3);
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        z-index: 10;
+      }
+      .tma-header h2 {
+        margin: 0;
+        font-size: 1.4rem;
+        font-weight: 700;
+        letter-spacing: 1px;
+        color: #10B981;
+        text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
       }
       .tma-content {
         flex: 1;
         overflow-y: auto;
         padding: 1rem;
+        padding-bottom: 2rem;
       }
-      .tma-footer {
-        padding: 1rem;
-        background: rgba(0,0,0,0.8);
-        border-top: 1px solid var(--border-color);
-        display: flex;
-        justify-content: space-around;
+
+      .tma-content::-webkit-scrollbar {
+        width: 6px;
       }
-      .tma-tab {
-        background: none;
-        border: none;
-        color: var(--text-secondary);
-        font-size: 0.9rem;
-        padding: 0.5rem;
+      .tma-content::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.02);
       }
-      .tma-tab.active {
-        color: var(--accent-color);
+      .tma-content::-webkit-scrollbar-thumb {
+        background: rgba(16, 185, 129, 0.3);
+        border-radius: 10px;
       }
-      .preset-card {
+
+      .filter-group select, input[type="text"] {
+        width: 100%;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        color: #fff;
+        font-size: 1rem;
+        outline: none;
+        transition: border-color 0.3s, box-shadow 0.3s;
         margin-bottom: 1rem;
       }
-      /* Hide standard header */
-      .header, .config-panel, .farms-panel, .results-panel { display: none; }
+
+      .filter-group select:focus, input[type="text"]:focus {
+        border-color: #8B5CF6;
+        box-shadow: 0 0 10px rgba(139, 92, 246, 0.2);
+      }
+
+      .preset-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        transition: transform 0.2s, border-color 0.2s;
+      }
+
+      .preset-card:active {
+        transform: scale(0.98);
+        border-color: rgba(16, 185, 129, 0.5);
+      }
+
+      .preset-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .preset-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        background: rgba(0,0,0,0.5);
+      }
+
+      .preset-details h3 {
+        margin: 0 0 4px 0;
+        font-size: 1.1rem;
+        color: #fff;
+      }
+
+      .preset-details p {
+        margin: 0;
+        font-size: 0.85rem;
+        color: #8B5CF6;
+      }
+
+      button.primary-btn {
+        width: 100%;
+        padding: 12px;
+        background: rgba(16, 185, 129, 0.1);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        border-radius: 8px;
+        color: #10B981;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      button.primary-btn:active {
+        background: rgba(16, 185, 129, 0.2);
+        box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+      }
     </style>
+
   </head>
   <body>
     <div id="tma-app">
