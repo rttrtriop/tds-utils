@@ -486,6 +486,10 @@ async def report_preset_api(request):
     except Exception as e:
         return web.json_response({"success": False, "error": str(e)}, status=500)
 
+
+async def root_handler(request):
+    return web.Response(text="Server is running OK")
+
 async def health_check_api(request):
     return web.Response(text="OK")
 
@@ -634,7 +638,10 @@ app.router.add_get('/api/presets', get_presets_api)
 app.router.add_post('/api/tma/apply', apply_preset_tma_api)
 app.router.add_post('/api/interact', interact_preset_api)
 app.router.add_post('/api/report', report_preset_api)
+
+app.router.add_get('/', root_handler)
 app.router.add_get('/health', health_check_api)
+
 app.router.add_get('/api/bot_info', get_bot_info_api)
 app.router.add_get('/api/favorites', get_favorites_api)
 app.router.add_get('/api/my_presets', get_my_presets_api)

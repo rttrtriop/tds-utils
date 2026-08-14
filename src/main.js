@@ -826,7 +826,7 @@ function applyPresetToUI(preset) {
 }
 
 document.getElementById('btnPublishFromRewards').onclick = () => {
-    closeDrawer(document.getElementById('rewardsDrawer'));
+    closeAllDrawers();
     openDrawer(document.getElementById('libraryDrawer'));
     const pubTab = document.querySelector('[data-target="lib-publish"]');
     if (pubTab) pubTab.click();
@@ -968,3 +968,14 @@ const btnConnect = document.getElementById('btnConnectTelegram');
 if(btnConnect) {
     btnConnect.addEventListener('click', handleDeepLinkAuth);
 }
+
+
+// Hide global loader when DOM and everything is ready
+window.addEventListener('load', () => {
+    const loader = document.getElementById('global-loader');
+    if (loader) {
+        setTimeout(() => {
+            loader.classList.add('hidden');
+        }, 500); // Small delay for smooth effect
+    }
+});
