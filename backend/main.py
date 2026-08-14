@@ -319,14 +319,14 @@ async def mod_callback(callback: types.CallbackQuery):
 
 async def generate_auth_key_api(request):
     try:
-        data = await request.json()
-        session_id = data.get('session_id')
-        if not session_id:
-            return web.json_response({"error": "session_id required"}, status=400)
+        token = request.headers.get('Authorization')
+        if not token:
+            return web.json_response({"error": "Token required"}, status=401)
+        token = token.replace('Bearer ', '')
 
         auth_key = str(uuid.uuid4())
         async with aiosqlite.connect(DB_FILE) as db:
-            await db.execute("INSERT INTO auth_sessions (auth_key, session_id) VALUES (?, ?)", (auth_key, session_id))
+            await db.execute("INSERT OR REPLACE INTO auth_sessions (auth_key, session_id) VALUES (?, ?)", (auth_key, token))
             await db.commit()
 
         return web.json_response({"auth_key": auth_key})
@@ -677,18 +677,31 @@ async def websocket_handler(request):
 async def handle_cors(request):
     return web.Response(text="OK", headers={
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Access-Control-Allow-Methods": "*",
+        "Access-Control-Allow-Headers": "*",
     })
 
-async def app_middleware(app, handler):
-    async def middleware_handler(request):
+from aiohttp.web import middleware
+
+@middleware
+async def app_middleware(request, handler):
+    if request.method == 'OPTIONS':
+        return web.Response(headers={
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': '*',
+            'Access-Control-Allow-Headers': '*',
+        })
+    try:
         response = await handler(request)
         response.headers['Access-Control-Allow-Origin'] = '*'
-        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        response.headers['Access-Control-Allow-Methods'] = '*'
+        response.headers['Access-Control-Allow-Headers'] = '*'
         return response
-    return middleware_handler
+    except web.HTTPException as ex:
+        ex.headers['Access-Control-Allow-Origin'] = '*'
+        ex.headers['Access-Control-Allow-Methods'] = '*'
+        ex.headers['Access-Control-Allow-Headers'] = '*'
+        raise
 
 app = web.Application(middlewares=[app_middleware])
 app.router.add_get('/ws', websocket_handler)
@@ -710,7 +723,7 @@ app.router.add_get('/api/bot_info', get_bot_info_api)
 app.router.add_get('/api/favorites', get_favorites_api)
 app.router.add_get('/api/my_presets', get_my_presets_api)
 app.router.add_get('/api/profile', get_profile_api)
-app.router.add_route('OPTIONS', '/{path:.*}', handle_cors)
+
 
 # --- Keep Alive Task ---
 async def keep_alive():
