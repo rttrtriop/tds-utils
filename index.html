@@ -9,8 +9,6 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-
-<!-- Global Loading Screen -->
 <div id="global-loader" class="global-loader">
     <div class="loader-content">
         <div class="quantum-core">
@@ -22,9 +20,6 @@
         <div class="loading-text neon-text" style="margin-top: 20px; font-size: 1.2rem; letter-spacing: 2px;">ЗАГРУЗКА СИСТЕМЫ...</div>
     </div>
 </div>
-
-
-<!-- Liquid UI Filter -->
 <svg style="visibility: hidden; position: absolute;" width="0" height="0" xmlns="http://www.w3.org/2000/svg" version="1.1">
     <defs>
         <filter id="liquid">
@@ -34,9 +29,7 @@
         </filter>
     </defs>
 </svg>
-
 <canvas id="bg-canvas"></canvas>
-
 <div class="app-container">
     <header>
         <div class="logo">
@@ -58,42 +51,32 @@
             </button>
         </div>
     </header>
-
     <div class="main-content">
-        <!-- Deck Card -->
         <div class="card liquid-card">
             <div class="card-header">
                 <span>Активная колода ферм</span>
                 <span id="lblDeckIncome" style="color: var(--accent-emerald);">+$0 / волна</span>
             </div>
-
             <div class="quick-actions" style="margin-bottom: 8px;">
                 <button class="badge-btn liquid-btn" id="btnAddFarm0">+ Ферма Ур 0 ($300)</button>
                 <button class="badge-btn liquid-btn" id="btnPreset5x2">5x Ур 2</button>
                 <button class="badge-btn liquid-btn" id="btnPreset10x3">10x Ур 3</button>
                 <button class="badge-btn liquid-btn danger-btn" id="btnClearDeck">Очистить</button>
             </div>
-
             <div class="farm-deck custom-scrollbar" id="farmDeckList">
-                <!-- Farm items injected via JS -->
             </div>
-
             <div style="font-size: 0.75rem; color: var(--text-tertiary); text-align: center; margin-top: auto;">
                 <span id="lblDeckCount">0/10 Ферм</span>
             </div>
         </div>
-
-        <!-- Strategy Card -->
         <div class="card liquid-card">
             <div class="card-header">
                 <span>Вердикт симуляции</span>
             </div>
-
             <div class="verdict-banner realizable" id="verdictBanner">
                 <h2 id="verdictTitle">ВЫПОЛНИМО</h2>
                 <p id="verdictSub">Чистые деньги (без продажи)</p>
             </div>
-
             <div class="metrics-row">
                 <div class="metric">
                     <span class="lbl">Чистые деньги</span>
@@ -104,7 +87,6 @@
                     <span class="val" id="valTotalIncome" style="color: var(--text-primary);">+$0</span>
                 </div>
             </div>
-
             <div class="card-header" style="margin-top: 8px;">
                 <span>План действий</span>
                 <div style="display: flex; gap: 8px;">
@@ -112,18 +94,12 @@
                     <button class="badge-btn liquid-btn" id="btnToggleDetailed">Детали</button>
                 </div>
             </div>
-
             <div class="strategy-list custom-scrollbar" id="strategyList">
-                <!-- Strategy steps injected via JS -->
             </div>
         </div>
     </div>
 </div>
-
-
-<!-- Auth Overlays -->
 <div class="drawer-overlay" id="authOverlay"></div>
-
 <div class="drawer" id="authDrawer">
     <div class="drawer-header">
         <span id="authDrawerTitle">Вход в систему</span>
@@ -145,11 +121,7 @@
         </div>
     </div>
 </div>
-
-<!-- Drawer Overlay -->
 <div class="drawer-overlay" id="drawerOverlay"></div>
-
-<!-- Settings Drawer -->
 <div class="drawer" id="settingsDrawer">
     <div class="drawer-header">
         <span>Настройки симуляции</span>
@@ -206,8 +178,6 @@
         </div>
     </div>
 </div>
-
-<!-- Rewards Drawer -->
 <div class="drawer" id="rewardsDrawer">
     <div class="drawer-header">
         <span>Награды за волны</span>
@@ -220,11 +190,8 @@
                 <div class="toggle-knob active"></div>
             </div>
         </label>
-
         <div class="input-group">
             <label>Сохраненные пресеты наград</label>
-
-            <!-- Custom Dropdown for Modes -->
             <div class="custom-dropdown" id="dropdownMode" data-value="Easy">
                 <div class="dropdown-selected liquid-input">
                     <span class="selected-text">Easy</span>
@@ -244,8 +211,6 @@
                     <li data-value="Polluted Wasteland II">Polluted Wasteland II</li>
                 </ul>
             </div>
-
-            <!-- Custom Dropdown for Players -->
             <div class="custom-dropdown" style="margin-top:8px;" id="dropdownPlayers" data-value="1">
                 <div class="dropdown-selected liquid-input">
                     <span class="selected-text">1P - Solo</span>
@@ -258,7 +223,6 @@
                     <li data-value="4">4P - Squad</li>
                 </ul>
             </div>
-
             <div style="display: flex; gap: 8px; margin-top: 8px;">
                 <input type="text" id="inpPresetName" placeholder="Название..." style="flex: 1; outline: none; font-size: 0.8rem;" class="liquid-input">
                 <button class="btn btn-primary liquid-btn" style="padding: 6px 12px;" id="btnSavePresetLocally">
@@ -276,7 +240,6 @@
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
                     </div>
                     <ul class="dropdown-list custom-scrollbar" id="listLocalPresets">
-                        <!-- Populated via JS -->
                     </ul>
                 </div>
                 <button class="btn liquid-btn" style="padding: 6px 12px;" id="btnLoadLocalPreset">
@@ -289,27 +252,21 @@
                 </button>
             </div>
         </div>
-
         <div class="input-group">
             <label>Кол-во волн в режиме (1-100)</label>
             <div class="input-control liquid-input">
                 <input type="number" id="inpModeWaves" value="40" min="1" max="100">
             </div>
         </div>
-
         <div class="wave-grid" id="waveGridContainer">
-            <!-- Injected via JS -->
         </div>
     </div>
 </div>
-
-<!-- Library Drawer (Community & Profile) -->
 <div class="drawer" id="libraryDrawer">
     <div class="drawer-header">
         <span>Библиотека & Профиль</span>
         <button class="btn liquid-btn" style="padding: 4px 8px;" id="btnCloseLibraryDrawer">✕</button>
     </div>
-
     <div class="drawer-tabs">
         <button class="tab-btn active" data-target="lib-catalog">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
@@ -324,9 +281,7 @@
             Профиль
         </button>
     </div>
-
     <div class="drawer-content custom-scrollbar">
-        <!-- Catalog Tab -->
         <div id="lib-catalog" class="tab-pane active">
             <div class="custom-dropdown" id="dropdownCatalogFilter" data-value="All" style="margin-bottom:16px;">
                 <div class="dropdown-selected liquid-input">
@@ -349,12 +304,9 @@
                 </ul>
             </div>
             <div id="community-presets-list" class="presets-list">
-                <!-- Fetch from backend -->
                 <p>Загрузка...</p>
             </div>
         </div>
-
-        <!-- Publish Tab -->
         <div id="lib-publish" class="tab-pane">
             <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem;">
                 Опубликовать текущие настройки наград (Wave Rewards Preset) в общую базу.
@@ -366,9 +318,6 @@
             <button class="btn btn-primary liquid-btn" id="btnPublishPreset" style="width:100%;">Опубликовать</button>
             <p id="publishStatus" style="font-size:0.8rem; margin-top:8px; text-align:center;"></p>
         </div>
-
-
-        <!-- Profile Tab -->
         <div id="lib-profile" class="tab-pane">
             <div id="profileSection">
                 <div id="profileGuest">
@@ -378,7 +327,6 @@
                     </div>
                     <button class="btn btn-primary liquid-btn" id="btnOpenAuth" style="width: 100%; margin-bottom: 12px;">Войти / Регистрация</button>
                 </div>
-
                 <div id="profileAuth" style="display: none; text-align: center;">
                     <div id="profileAvatar" style="width: 80px; height: 80px; border-radius: 50%; background: var(--accent-emerald); color: white; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; margin: 0 auto 15px;"></div>
                     <h2 id="profileUsername" style="margin: 0 0 5px 0;"></h2>
@@ -396,7 +344,6 @@
                             <div style="font-size: 12px; color: var(--text-tertiary);">Лайки</div>
                         </div>
                     </div>
-
                     <div id="tgLinkSection" style="margin-top: 20px;">
                         <button class="btn btn-accent liquid-btn" id="btnConnectTelegram" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
                             📱 Подключить Telegram
@@ -408,15 +355,10 @@
                             Выйти из аккаунта
                         </button>
                     </div>
-
 </div>
-
                 <h3 style="margin-top:16px; font-size:1rem;">Сохраненные локально пресеты</h3>
                 <ul class="dropdown-list custom-scrollbar" id="listProfileLocalPresets" style="display:block; position:static; opacity:1; transform:none; margin-bottom: 1rem; background: var(--bg-input);">
-                    <!-- Injected locally -->
                 </ul>
-
-
                 <h3 style="margin-top:16px; font-size:1rem;">Мои публикации</h3>
                 <div id="my-presets-list" class="presets-list"></div>
                 <h3 style="margin-top:16px; font-size:1rem;">Избранное</h3>
@@ -425,8 +367,6 @@
         </div>
     </div>
 </div>
-
-<!-- Farm Action Modal -->
 <div id="farmActionModal">
     <div class="farm-action-header">
         <h3 id="farmActionTitle">Ферма Lvl 2</h3>
@@ -446,12 +386,10 @@
         </button>
     </div>
 </div>
-
 <script type="module" src="./src/main.js"></script>
 <div id="toast" class="toast"></div>
 </body>
 </html>
-<!-- Appeal Modal -->
 <div id="appealModal" class="modal-overlay">
     <div class="modal-content" style="max-width: 400px; text-align: center;">
         <h3 style="color: var(--danger-color); margin-top: 0;">Режим занят</h3>
@@ -460,7 +398,6 @@
             Вы можете подать заявку модератору на его замену, если ваш пресет лучше.
         </p>
         <textarea id="inpAppealReason" class="input-field" placeholder="Опишите, почему ваш пресет лучше..." rows="3" style="width: 100%; margin-bottom: 15px; resize: none;"></textarea>
-
         <div style="display: flex; gap: 10px;">
             <button class="btn btn-primary" style="flex: 1; background: var(--bg-card);" onclick="document.getElementById('appealModal').classList.remove('active');">Отмена</button>
             <button class="btn btn-accent" style="flex: 1;" onclick="doPublish(true, document.getElementById('inpAppealReason').value)">⚠️ Подать заявку</button>
