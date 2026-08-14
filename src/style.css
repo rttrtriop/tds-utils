@@ -988,3 +988,28 @@ header {
     0%, 100% { opacity: 0.8; transform: scale(0.98); }
     50% { opacity: 1; transform: scale(1.02); }
 }
+
+
+/* Toast Notification */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: rgba(11, 12, 16, 0.9);
+    border: 1px solid var(--accent-emerald);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+    z-index: 9999;
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+    backdrop-filter: blur(8px);
+}
+.toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}

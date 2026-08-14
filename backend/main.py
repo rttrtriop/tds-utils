@@ -129,11 +129,11 @@ async def start_handler(message: types.Message):
 
                 await db.execute("DELETE FROM auth_sessions WHERE auth_key = ?", (auth_key,))
                 await db.commit()
-                await message.answer("✅ Аккаунт успешно привязан к TDS Strategist!")
+                await message.answer(f"✅ Аккаунт <b>{message.from_user.username or 'Anonymous'}</b> успешно привязан к сайту TDS Strategist!\n\nТеперь вы можете сохранять и публиковать пресеты прямо из веб-версии.", parse_mode="HTML")
             else:
                 await message.answer("❌ Недействительный или устаревший ключ авторизации.")
     else:
-        await message.answer("Добро пожаловать в TDS STRATEGIST Бот!\nОткрывайте мини-апп или привязывайте сессию с сайта.")
+        await message.answer("👋 Добро пожаловать в <b>TDS STRATEGIST Бот</b>!\n\nДля работы с пресетами и сохранения стратегий вам нужно авторизоваться.\n\n🔗 <b>Как войти:</b>\n1. Перейдите на наш сайт.\n2. Откройте вкладку <b>«Библиотека & Профиль»</b>.\n3. Нажмите <b>«📱 Подключить Telegram»</b>.\n4. Бот автоматически свяжет ваш аккаунт!\n\nТакже вы можете использовать встроенный Mini App прямо в Telegram ⬇️", parse_mode="HTML")
 
 @dp.message(Command("profile"))
 async def profile_handler(message: types.Message):
