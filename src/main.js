@@ -919,6 +919,7 @@ document.getElementById('btnPublishPreset').onclick = async () => {
     }
 };
 
+
 function applyPresetToUI(preset) {
     if(preset.mode) document.getElementById('dropdownMode').setAttribute('data-value', preset.mode);
     if(preset.mode) document.getElementById('dropdownMode').querySelector('.selected-text').textContent = preset.mode;
@@ -932,7 +933,9 @@ function applyPresetToUI(preset) {
         for(let i=0; i<preset.rewards.length; i++) waveRewardsData[i] = preset.rewards[i];
         renderWaveGrid();
     }
+    if(typeof runAutoSim === 'function') runAutoSim();
 }
+
 
 document.getElementById('btnPublishFromRewards').onclick = () => {
     closeAllDrawers();
