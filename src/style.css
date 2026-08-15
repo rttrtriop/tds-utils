@@ -1032,8 +1032,8 @@ header {
     flex-direction: column;
 }
 
-header { order: 1; }
-.config-panel { order: 2; }
+header { order: 0; }
+.main-content { order: 1; }
 .results-panel { order: 3; margin-top: 10px; margin-bottom: 10px; }
 .farms-panel { order: 4; }
 
