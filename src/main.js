@@ -1178,3 +1178,89 @@ setTimeout(() => {
 
 window.fetchProfileData = fetchProfileData;
 window.fetchCommunityPresets = fetchCommunityPresets;
+
+
+// --- Support Widget Logic ---
+const SUPPORT_SYSTEM_PROMPT = `
+[ИНСТРУКЦИЯ ДЛЯ ТЕХПОДДЕРЖКИ]:
+Ты — официальный ИИ-ассистент технической поддержки сайта по TDS (Tower Defense Simulator).
+Правила:
+- Отвечай вежливо, четко и структурированно на русском языке.
+- Помогай с вопросами по сайту, стратегиям, башням и механике TDS.
+- Не давай невыполнимых обещаний и не выдумывай несуществующие функции сайта.
+---`;
+
+const btnSupportWidget = document.getElementById('btnSupportWidget');
+const supportDrawer = document.getElementById('supportDrawer');
+const supportOverlay = document.getElementById('supportOverlay');
+const btnCloseSupport = document.getElementById('btnCloseSupport');
+const btnSendSupport = document.getElementById('btnSendSupport');
+const inpSupportMsg = document.getElementById('inpSupportMsg');
+const supportChatArea = document.getElementById('supportChatArea');
+const supportLoading = document.getElementById('supportLoading');
+
+if (btnSupportWidget) {
+    btnSupportWidget.onclick = () => {
+        supportOverlay.classList.add('active');
+        supportDrawer.classList.add('active');
+        setTimeout(() => inpSupportMsg.focus(), 100);
+    };
+}
+
+const closeSupport = () => {
+    supportOverlay.classList.remove('active');
+    supportDrawer.classList.remove('active');
+};
+if(btnCloseSupport) btnCloseSupport.onclick = closeSupport;
+if(supportOverlay) supportOverlay.onclick = closeSupport;
+
+function addChatMessage(text, isUser) {
+    const div = document.createElement('div');
+    div.className = `chat-msg ${isUser ? 'user-msg' : 'ai-msg'}`;
+    div.textContent = text;
+    supportChatArea.appendChild(div);
+    supportChatArea.scrollTop = supportChatArea.scrollHeight;
+}
+
+async function sendSupportTicket(userQuestion) {
+    const fullPayloadText = `${SUPPORT_SYSTEM_PROMPT}\nВопрос пользователя:\n${userQuestion.trim()}`;
+    const res = await fetch("https://script.google.com/macros/s/AKfycbwnowDWeBwoOM6AwjEKj-oDHc7MO_QKgpEyl0yTupQj5hzCQcHpTERSOb6fzybnrqyc/exec", {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ question: fullPayloadText })
+    });
+    return await res.json();
+}
+
+if (btnSendSupport) {
+    btnSendSupport.onclick = async () => {
+        const text = inpSupportMsg.value.trim();
+        if (!text) return;
+
+        addChatMessage(text, true);
+        inpSupportMsg.value = '';
+
+        supportLoading.style.display = 'flex';
+
+        try {
+            const data = await sendSupportTicket(text);
+            if (data.status === "success") {
+                addChatMessage(data.answer, false);
+            } else {
+                addChatMessage("Произошла ошибка при обращении к ИИ-агенту. Пожалуйста, попробуйте позже.", false);
+            }
+        } catch (e) {
+            addChatMessage("Сетевая ошибка. Не удалось связаться с сервером поддержки.", false);
+        } finally {
+            supportLoading.style.display = 'none';
+        }
+    };
+}
+
+// Auto-resize textarea
+if (inpSupportMsg) {
+    inpSupportMsg.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    });
+}
