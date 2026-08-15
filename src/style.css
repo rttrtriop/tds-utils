@@ -1043,3 +1043,18 @@ header { order: 1; }
         display: grid;
     }
 }
+
+
+.app-container {
+    height: 100vh;
+    overflow-y: auto;
+    padding-bottom: 50px; /* safe area */
+}
+/* Hide scrollbar for app container */
+.app-container::-webkit-scrollbar {
+    display: none;
+}
+.app-container {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}

@@ -269,11 +269,11 @@ async def load_preset_callback(callback: types.CallbackQuery):
         ws = active_websockets[session_id]
         try:
             await ws.send_json({"type": "load_preset", "preset": preset_data})
-            await callback.message.answer(f"✅ Preset successfully loaded to calculator (Session `{session_id}`)!", parse_mode="Markdown")
+            await callback.message.answer(f"✅ Пресет отправлен на ваш сайт!", parse_mode="Markdown")
         except Exception as e:
-            await callback.message.answer(f"❌ Failed to send data: {e}")
+            await callback.message.answer(f"❌ Ошибка отправки данных: {e}")
     else:
-        await callback.message.answer(f"❌ Session `{session_id}` is not currently connected to the website. Is the tab open?")
+        await callback.message.answer(f"❌ Ваш сайт не открыт. Откройте сайт, войдите в аккаунт, и попробуйте снова.")
 
     await callback.answer()
 
