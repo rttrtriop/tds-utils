@@ -1173,3 +1173,11 @@ header { order: 0; }
     margin-top: 8px;
     margin-bottom: 8px;
 }
+
+
+html {
+    scroll-behavior: smooth;
+}
+.support-chat {
+    scroll-behavior: smooth;
+}

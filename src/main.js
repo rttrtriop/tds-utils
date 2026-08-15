@@ -1180,24 +1180,21 @@ window.fetchProfileData = fetchProfileData;
 window.fetchCommunityPresets = fetchCommunityPresets;
 
 
-// --- Support Widget Logic ---
-const SUPPORT_SYSTEM_PROMPT = `
-[ИНСТРУКЦИЯ ДЛЯ ТЕХПОДДЕРЖКИ]:
-Ты — официальный ИИ-ассистент технической поддержки сайта по TDS (Tower Defense Simulator).
-Правила:
-- Отвечай вежливо, четко и структурированно на русском языке.
-- Помогай с вопросами по сайту, стратегиям, башням и механике TDS.
-- Не давай невыполнимых обещаний и не выдумывай несуществующие функции сайта.
----`;
 
+// --- Support Widget Logic ---
 const btnSupportWidget = document.getElementById('btnSupportWidget');
 const supportDrawer = document.getElementById('supportDrawer');
 const supportOverlay = document.getElementById('supportOverlay');
 const btnCloseSupport = document.getElementById('btnCloseSupport');
 const btnSendSupport = document.getElementById('btnSendSupport');
+const btnClearChat = document.getElementById('btnClearChat');
 const inpSupportMsg = document.getElementById('inpSupportMsg');
 const supportChatArea = document.getElementById('supportChatArea');
 const supportLoading = document.getElementById('supportLoading');
+const supportLoadingText = document.getElementById('supportLoadingText');
+
+let chatHistory = [];
+let timerInterval = null;
 
 if (btnSupportWidget) {
     btnSupportWidget.onclick = () => {
@@ -1219,17 +1216,53 @@ function addChatMessage(text, isUser) {
     div.className = `chat-msg ${isUser ? 'user-msg' : 'ai-msg'}`;
     div.textContent = text;
     supportChatArea.appendChild(div);
-    supportChatArea.scrollTop = supportChatArea.scrollHeight;
+
+    // Smooth scroll to bottom
+    setTimeout(() => {
+        supportChatArea.scrollTo({ top: supportChatArea.scrollHeight, behavior: 'smooth' });
+    }, 50);
+}
+
+function buildPayloadText(history, newQuestion) {
+  const systemHeader = "[ИНСТРУКЦИЯ]: Ты — агент Onimo. Отвечай вежливо, кратко и человечно на русском языке от лица реального сотрудника поддержки. Категорически запрещено упоминать ИИ, нейросети или ботов.\n\n";
+
+  if (!history || history.length === 0) {
+    return systemHeader + "Вопрос пользователя:\n" + newQuestion.trim();
+  }
+
+  let formattedHistory = "[История предыдущей переписки]:\n";
+  history.forEach(msg => {
+    const roleName = msg.sender === "user" ? "Пользователь" : "Агент Onimo";
+    formattedHistory += `${roleName}: ${msg.text}\n`;
+  });
+
+  return `${systemHeader}${formattedHistory}\n[Новое сообщение пользователя]:\n${newQuestion.trim()}`;
 }
 
 async function sendSupportTicket(userQuestion) {
-    const fullPayloadText = `${SUPPORT_SYSTEM_PROMPT}\nВопрос пользователя:\n${userQuestion.trim()}`;
+    const fullPayloadText = buildPayloadText(chatHistory, userQuestion);
     const res = await fetch("https://script.google.com/macros/s/AKfycbwnowDWeBwoOM6AwjEKj-oDHc7MO_QKgpEyl0yTupQj5hzCQcHpTERSOb6fzybnrqyc/exec", {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({ question: fullPayloadText })
     });
     return await res.json();
+}
+
+function startTimer() {
+    let seconds = 0;
+    supportLoadingText.innerHTML = `Агент изучает обращение и готовит ответ...<br><small>(${seconds} сек)</small>`;
+    timerInterval = setInterval(() => {
+        seconds++;
+        supportLoadingText.innerHTML = `Агент изучает обращение и готовит ответ...<br><small>(${seconds} сек)</small>`;
+    }, 1000);
+}
+
+function stopTimer() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
 }
 
 if (btnSendSupport) {
@@ -1239,21 +1272,39 @@ if (btnSendSupport) {
 
         addChatMessage(text, true);
         inpSupportMsg.value = '';
+        inpSupportMsg.style.height = 'auto'; // reset textarea size
 
         supportLoading.style.display = 'flex';
+        startTimer();
 
         try {
             const data = await sendSupportTicket(text);
+            stopTimer();
             if (data.status === "success") {
                 addChatMessage(data.answer, false);
+                chatHistory.push({ sender: 'user', text: text });
+                chatHistory.push({ sender: 'agent', text: data.answer });
+            } else if (data.status === "error" && data.code === "BUSY") {
+                addChatMessage("Просим прощения, сейчас все специалисты поддержки отвечают другим пользователям. Пожалуйста, подождите или повторите вопрос через минуту.", false);
+            } else if (data.status === "error" && data.code === "REGION_BLOCKED") {
+                addChatMessage("Просим прощения, но сервис сейчас не работает в вашей стране. Пожалуйста, используйте VPN или прокси.", false);
             } else {
-                addChatMessage("Произошла ошибка при обращении к ИИ-агенту. Пожалуйста, попробуйте позже.", false);
+                addChatMessage("Произошла ошибка при обращении к серверу. Пожалуйста, попробуйте позже.", false);
             }
         } catch (e) {
+            stopTimer();
             addChatMessage("Сетевая ошибка. Не удалось связаться с сервером поддержки.", false);
         } finally {
             supportLoading.style.display = 'none';
+            stopTimer();
         }
+    };
+}
+
+if (btnClearChat) {
+    btnClearChat.onclick = () => {
+        chatHistory = [];
+        supportChatArea.innerHTML = `<div class="chat-msg ai-msg" id="supportInitialMsg">Здравствуйте! Я агент Onimo. Чем могу вам помочь?</div>`;
     };
 }
 
