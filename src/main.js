@@ -130,6 +130,7 @@ window.adjustVal = (id, delta) => {
     if (el.max && v > parseInt(el.max)) v = parseInt(el.max);
     el.value = v;
     if (id === 'inpModeWaves') renderWaveGrid();
+    runAutoSim();
 };
 
 window.addVal = (id, amt) => {
@@ -137,6 +138,7 @@ window.addVal = (id, amt) => {
     let v = parseInt(el.value) + amt;
     if (v < parseInt(el.min)) v = parseInt(el.min);
     el.value = v;
+    runAutoSim();
 };
 
 // Custom Dropdowns
@@ -411,6 +413,74 @@ function animateValue(obj, start, end, duration) {
   };
   window.requestAnimationFrame(step);
 }
+
+
+function runAutoSim() {
+    const btn = document.getElementById('btnRunSim');
+    if (btn && btn.onclick) {
+        // Run sim without closing drawers to avoid annoying UX
+        const startWave = parseInt(document.getElementById('inpCurrentWave').value);
+        const targetWave = parseInt(document.getElementById('inpTargetWave').value);
+        const startCash = parseInt(document.getElementById('inpStartCash').value);
+        const targetCash = parseInt(document.getElementById('inpTargetCash').value);
+        const isRewardsActive = document.getElementById('toggleWaveRewards').getAttribute('data-active') === 'true';
+
+        const result = runSimulation(
+            startWave, targetWave, startCash, targetCash,
+            [...activeFarms], isRewardsActive, waveRewardsData
+        );
+
+        animateValue(document.getElementById('valPureCash'), 0, result.pureCash, 500);
+        animateValue(document.getElementById('valTotalIncome'), 0, result.totalIncomeGenerated, 500);
+
+        const banner = document.getElementById('verdictBanner');
+        const title = document.getElementById('verdictTitle');
+        const sub = document.getElementById('verdictSub');
+
+        if (result.pureCash >= targetCash) {
+            banner.className = 'verdict-banner realizable';
+            title.textContent = 'ВЫПОЛНИМО';
+            sub.textContent = 'Накоплено чистыми деньгами';
+        } else if (result.cashWithSells >= targetCash) {
+            banner.className = 'verdict-banner realizable';
+            title.textContent = 'ВЫПОЛНИМО (С ПРОДАЖЕЙ)';
+            sub.textContent = `Нужно продать ферм на ${result.accumulatedSell.toLocaleString()}`;
+        } else {
+            banner.className = 'verdict-banner unrealizable';
+            title.textContent = 'НЕ ХВАТАЕТ ДЕНЕГ';
+            sub.textContent = `Недостает ${(targetCash - result.maxWealth).toLocaleString()} (даже с продажей)`;
+        }
+
+        const stratList = document.getElementById('strategyList');
+        const aggregated = compactAggregateHistory(result.history);
+        stratList.innerHTML = '';
+
+        // Show strategy details automatically without needing toggle
+        document.getElementById('strategyList').classList.remove('hidden');
+
+        if (aggregated.length === 0) {
+            stratList.innerHTML = '<div class="strat-row">Действий не требуется.</div>';
+            return;
+        }
+
+        aggregated.forEach(item => {
+            let el = document.createElement('div');
+            el.className = `strat-row ${item.isWait ? 'wait' : ''}`;
+            el.innerHTML = `
+                <div class="strat-wave">W ${item.waveText}</div>
+                <div class="strat-action">${item.actionText}</div>
+                <div class="strat-cash">${item.endCash.toLocaleString()}</div>
+            `;
+            stratList.appendChild(el);
+        });
+    }
+}
+
+// Bind to inputs
+['inpCurrentWave', 'inpTargetWave', 'inpStartCash', 'inpTargetCash'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('input', runAutoSim);
+});
 
 document.getElementById('btnRunSim').onclick = () => {
     const startWave = parseInt(document.getElementById('inpCurrentWave').value);
