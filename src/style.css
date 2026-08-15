@@ -1025,3 +1025,21 @@ header {
     background: rgba(239, 68, 68, 0.2);
     box-shadow: 0 0 15px rgba(239, 68, 68, 0.4), inset 0 0 20px rgba(239, 68, 68, 0.4);
 }
+
+/* Reorder panels for better mobile experience */
+.app-container {
+    display: flex;
+    flex-direction: column;
+}
+
+header { order: 1; }
+.config-panel { order: 2; }
+.results-panel { order: 3; margin-top: 10px; margin-bottom: 10px; }
+.farms-panel { order: 4; }
+
+/* In Desktop grid, keep normal flow if possible, or leave as is since grid uses auto-flow */
+@media(min-width: 1024px) {
+    .app-container {
+        display: grid;
+    }
+}
