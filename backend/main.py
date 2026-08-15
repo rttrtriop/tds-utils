@@ -245,12 +245,15 @@ async def load_preset_callback(callback: types.CallbackQuery):
     pid_str = callback.data.split("_")[1]
     user_id = callback.from_user.id
 
-    if user_id not in user_sessions or 'session_id' not in user_sessions[user_id]:
-        await callback.message.answer("⚠️ You haven't connected a Web Session yet! Please type the 6-digit Session ID from the website, or use the link on the site.")
-        await callback.answer()
-        return
-
-    session_id = user_sessions[user_id]['session_id']
+    # Now user_id is telegram_id
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT auth_token FROM users WHERE telegram_id = ?", (user_id,)) as cursor:
+            row = await cursor.fetchone()
+            if not row:
+                await callback.message.answer("⚠️ Вы еще не привязали свой аккаунт к веб-версии. Авторизуйтесь на сайте и нажмите 'Привязать Telegram'.")
+                await callback.answer()
+                return
+            session_id = row[0] # auth_token is now the WS session_id
 
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute("SELECT data FROM presets WHERE id = ?", (int(pid_str),)) as cursor:
@@ -438,31 +441,35 @@ async def apply_preset_tma_api(request):
     try:
         data = await request.json()
         preset_id = data.get('preset_id')
-        target_session = data.get('target_session')
         tg_user_id = data.get('telegram_user_id')
 
-        session_id = None
-        if target_session:
-            session_id = target_session
-        elif tg_user_id and tg_user_id in user_sessions:
-            session_id = user_sessions[tg_user_id].get('session_id')
-
-        if not session_id or session_id not in active_websockets:
-            return web.json_response({"success": False, "error": "Target web session not connected."})
+        if not tg_user_id:
+            return web.json_response({"success": False, "error": "Telegram ID required."})
 
         async with aiosqlite.connect(DB_FILE) as db:
-            async with db.execute("SELECT data FROM presets WHERE id = ?", (int(preset_id),)) as cursor:
-                row = await cursor.fetchone()
+            async with db.execute("SELECT auth_token FROM users WHERE telegram_id = ?", (tg_user_id,)) as cursor:
+                u_row = await cursor.fetchone()
 
-        if not row:
+            if not u_row:
+                return web.json_response({"success": False, "error": "Web account not linked."})
+
+            auth_token = u_row[0]
+
+            async with db.execute("SELECT data FROM presets WHERE id = ?", (int(preset_id),)) as cursor:
+                p_row = await cursor.fetchone()
+
+        if not p_row:
             return web.json_response({"success": False, "error": "Preset not found."})
 
-        preset_data = json.loads(row[0])
+        preset_data = json.loads(p_row[0])
 
-        ws = active_websockets[session_id]
-        await ws.send_json({"type": "load_preset", "preset": preset_data})
-
-        return web.json_response({"success": True})
+        # Dispatch to the active websocket connected with this auth_token
+        if auth_token in active_websockets:
+            ws = active_websockets[auth_token]
+            await ws.send_json({"type": "load_preset", "preset": preset_data})
+            return web.json_response({"success": True})
+        else:
+            return web.json_response({"success": False, "error": "Сайт не открыт или соединение прервано."})
     except Exception as e:
         logging.error(f"Error applying from TMA: {e}")
         return web.json_response({"success": False, "error": str(e)}, status=500)
@@ -685,7 +692,7 @@ async def websocket_handler(request):
             if msg.type == web.WSMsgType.TEXT:
                 data = json.loads(msg.data)
                 if data.get('type') == 'register':
-                    session_id = data.get('sessionId')
+                    session_id = data.get('token')
                     if session_id:
                         active_websockets[session_id] = ws
                         logging.info(f"Session {session_id} registered.")

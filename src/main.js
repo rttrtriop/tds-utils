@@ -636,38 +636,41 @@ window.reportPreset = async (id, e) => {
 };
 
 // WebSocket & Auth logic ported over
-let sessionId = sessionStorage.getItem('sessionId');
-if (!sessionId) {
-  sessionId = Math.floor(100000 + Math.random() * 900000).toString();
-  sessionStorage.setItem('sessionId', sessionId);
-}
+
 
 let BOT_USERNAME = null;
 fetch(`${API_URL}/api/bot_info`).then(r => r.json()).then(d => BOT_USERNAME = d.username).catch(console.error);
 
 /* removed fastlogin logic */
 
+
+let activeWs = null;
 function connectWebSocket() {
+  if (activeWs) return; // Prevent multiple connections
   const wsUrl = WS_URL;
-  const ws = new WebSocket(wsUrl);
-  ws.onopen = () => ws.send(JSON.stringify({ type: 'register', sessionId: sessionId }));
-  ws.onmessage = (event) => {
+  activeWs = new WebSocket(wsUrl);
+  activeWs.onopen = () => {
+      // Send token if we are logged in, otherwise just a dummy ping to keep it alive or don't register.
+      // Actually, if we're not logged in, we can't receive presets from TMA.
+      if (authToken) {
+          activeWs.send(JSON.stringify({ type: 'register', token: authToken }));
+      }
+  };
+  activeWs.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
       if (data.type === 'load_preset' && data.preset) {
         applyPresetToUI(data.preset);
-        showToast("Пресет загружен!");
-      } else if (data.type === 'auth_success') {
-          currentUser = data;
-          if (typeof updateProfileUI !== 'undefined') {
-              updateProfileUI();
-          }
-          showToast('✅ Аккаунт привязан!');
+        showToast("Пресет загружен из Telegram!");
       }
     } catch (e) {}
   };
-  ws.onclose = () => setTimeout(connectWebSocket, 3000);
+  activeWs.onclose = () => {
+      activeWs = null;
+      setTimeout(connectWebSocket, 3000);
+  };
 }
+
 connectWebSocket();
 
 function renderProfileLocalPresets() {
@@ -1000,6 +1003,7 @@ document.getElementById('btnSubmitAuth').onclick = async () => {
             closeAuth();
             showToast("Успешный вход!");
             updateProfileUI();
+            if(activeWs && activeWs.readyState === WebSocket.OPEN) { activeWs.send(JSON.stringify({ type: 'register', token: authToken })); }
         } else {
             err.textContent = data.error;
             err.style.display = 'block';
