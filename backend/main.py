@@ -291,25 +291,49 @@ async def mod_callback(callback: types.CallbackQuery):
 
         if action == "approve":
             await db.execute("UPDATE presets SET status = 'approved' WHERE id = ?", (pid,))
-            if author_id: await update_user_stats(author_id, "", approved=1)
-            await callback.message.edit_text(callback.message.text + "\n\n✅ **ОДОБРЕНО**", parse_mode="Markdown")
+
+            tg_id = None
+            if author_id:
+                async with db.execute("SELECT telegram_id FROM users WHERE id = ?", (author_id,)) as u_cur:
+                    u_row = await u_cur.fetchone()
+                    if u_row and u_row[0]:
+                        tg_id = u_row[0]
+                        await update_user_stats(tg_id, "", approved=1)
+
+            # Use HTML to avoid Markdown parsing errors with arbitrary preset names
+            await callback.message.edit_text(callback.message.html_text + "\n\n✅ <b>ОДОБРЕНО</b>", parse_mode="HTML")
             try:
-                if author_id: await bot.send_message(author_id, "🎉 Ваш пресет был одобрен!")
+                if tg_id: await bot.send_message(tg_id, "🎉 Ваш пресет был одобрен!")
             except: pass
         elif action == "replace":
             mode = parts[2]
             await db.execute("DELETE FROM presets WHERE mode = ? AND status = 'approved'", (mode,))
             await db.execute("UPDATE presets SET status = 'approved' WHERE id = ?", (pid,))
-            if author_id: await update_user_stats(author_id, "", approved=1)
-            await callback.message.edit_text(callback.message.text + "\n\n✅ **ЗАМЕНА ОДОБРЕНА**", parse_mode="Markdown")
+
+            tg_id = None
+            if author_id:
+                async with db.execute("SELECT telegram_id FROM users WHERE id = ?", (author_id,)) as u_cur:
+                    u_row = await u_cur.fetchone()
+                    if u_row and u_row[0]:
+                        tg_id = u_row[0]
+                        await update_user_stats(tg_id, "", approved=1)
+
+            await callback.message.edit_text(callback.message.html_text + "\n\n✅ <b>ЗАМЕНА ОДОБРЕНА</b>", parse_mode="HTML")
             try:
-                if author_id: await bot.send_message(author_id, "🎉 Ваша апелляция одобрена, пресет заменен!")
+                if tg_id: await bot.send_message(tg_id, "🎉 Ваша апелляция одобрена, пресет заменен!")
             except: pass
         elif action == "reject":
             await db.execute("UPDATE presets SET status = 'rejected' WHERE id = ?", (pid,))
-            await callback.message.edit_text(callback.message.text + "\n\n❌ **ОТКЛОНЕНО**", parse_mode="Markdown")
+
+            tg_id = None
+            if author_id:
+                async with db.execute("SELECT telegram_id FROM users WHERE id = ?", (author_id,)) as u_cur:
+                    u_row = await u_cur.fetchone()
+                    if u_row and u_row[0]: tg_id = u_row[0]
+
+            await callback.message.edit_text(callback.message.html_text + "\n\n❌ <b>ОТКЛОНЕНО</b>", parse_mode="HTML")
             try:
-                if author_id: await bot.send_message(author_id, "К сожалению, ваш пресет был отклонен модератором.")
+                if tg_id: await bot.send_message(tg_id, "К сожалению, ваш пресет был отклонен модератором.")
             except: pass
         await db.commit()
 
