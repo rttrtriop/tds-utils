@@ -304,7 +304,9 @@ async def mod_callback(callback: types.CallbackQuery):
                         await update_user_stats(tg_id, "", approved=1)
 
             # Use HTML to avoid Markdown parsing errors with arbitrary preset names
-            await callback.message.edit_text(callback.message.html_text + "\n\n✅ <b>ОДОБРЕНО</b>", parse_mode="HTML")
+            import html
+            safe_text = html.escape(callback.message.text or "")
+            await callback.message.edit_text(safe_text + "\n\n✅ <b>ОДОБРЕНО</b>", parse_mode="HTML")
             try:
                 if tg_id: await bot.send_message(tg_id, "🎉 Ваш пресет был одобрен!")
             except: pass
@@ -321,7 +323,9 @@ async def mod_callback(callback: types.CallbackQuery):
                         tg_id = u_row[0]
                         await update_user_stats(tg_id, "", approved=1)
 
-            await callback.message.edit_text(callback.message.html_text + "\n\n✅ <b>ЗАМЕНА ОДОБРЕНА</b>", parse_mode="HTML")
+            import html
+            safe_text = html.escape(callback.message.text or "")
+            await callback.message.edit_text(safe_text + "\n\n✅ <b>ЗАМЕНА ОДОБРЕНА</b>", parse_mode="HTML")
             try:
                 if tg_id: await bot.send_message(tg_id, "🎉 Ваша апелляция одобрена, пресет заменен!")
             except: pass
@@ -334,7 +338,9 @@ async def mod_callback(callback: types.CallbackQuery):
                     u_row = await u_cur.fetchone()
                     if u_row and u_row[0]: tg_id = u_row[0]
 
-            await callback.message.edit_text(callback.message.html_text + "\n\n❌ <b>ОТКЛОНЕНО</b>", parse_mode="HTML")
+            import html
+            safe_text = html.escape(callback.message.text or "")
+            await callback.message.edit_text(safe_text + "\n\n❌ <b>ОТКЛОНЕНО</b>", parse_mode="HTML")
             try:
                 if tg_id: await bot.send_message(tg_id, "К сожалению, ваш пресет был отклонен модератором.")
             except: pass
